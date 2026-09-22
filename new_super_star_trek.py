@@ -152,18 +152,102 @@ class Game:
         print(f'  {self.Bases} STARBASE{self.X_str} IN THE GALAXY FOR RESUPPLYING YOUR SHIP')
         print()
 
-    def print_galaxy(self):
+    def __print_galaxy__(self):
         """Quick print of the Klingons-Bases-Stars distribution"""
         for i in range(1,9):
             for j in range(1,9):
                 print(f'{self.G[i][j]:03d} ', end="")
             print()
 
+    def enter_quadrant(self):
+        """1300 - 1600
+        Now entering X Quadrant"""
+        pass
+
+    def setup_quadrant(self):
+        """1660 - 1910
+        Place objects in sector grid"""
+        pass
+
+    def srs_display(self):
+        """6430 - 7260
+        Short Range Sensor Scan - Draw Sector + status panel"""
+        pass
+
+    def docked_check(self):
+        """6430 - 6620
+        Docking check"""
+        pass
+
+    def region_name(self, z4, z5, g5=0):
+        """9010 - 9300
+        z4: Q1
+        z5: Q2
+        g5: == 1, return region name only!
+        Return a region name, plus region number, optionally no region number"""
+        if z5 <= 4:
+            match z4:
+                case 1:
+                    g2 = "ANTARES"
+                case 2:
+                    g2 = "RIGEL"
+                case 3:
+                    g2 = "PROCYON"
+                case 4:
+                    g2 = "VEGA"
+                case 5:
+                    g2 = "CANOPUS"
+                case 6:
+                    g2 = "ALTAIR"
+                case 7:
+                    g2 = "SAGITTARIUS"
+                case 8:
+                    g2 = "POLLUX"
+        else:
+            match z4:
+                case 1:
+                    g2 = "SIRIUS"
+                case 2:
+                    g2 = "DENEB"
+                case 3:
+                    g2 = "CAPELLA"
+                case 4:
+                    g2 = "BETELGUEUSE"
+                case 5:
+                    g2 = "ALDEBARAN"
+                case 6:
+                    g2 = "REGULUS"
+                case 7:
+                    g2 = "ARCTURUS"
+                case 8:
+                    g2 = "SPICA"
+
+        if g5 == 1:
+            return g2
+        match z5:
+            case 1|5:
+                g2 += " I"
+            case 2|6:
+                g2 += " II"
+            case 3|7:
+                g2 += " III"
+            case 4|8:
+                g2 += " IV"
+        return g2
+
+
     def __repr__(self):
         return f'Game:\n\
 \tToday: {self.T} - Start Date: {self.T0} - Total Avail. Time: {self.T9}\n\
 \tQuadrant: [{self.Q1}, {self.Q2}], Sector: [{self.S1}, {self.S2}]\n\
 \tKlingons: {self.Klingons} - Bases: {self.Bases}'
+
+    def play(self):
+        """Play the game"""
+        self.setup_galaxy()
+        self.fix_up_galaxy()
+        self.print_orders()
+
 
 def check_T9_range():
     """Test the T9 range of the game with all the set ups & fixes"""
@@ -224,9 +308,22 @@ def check_galaxy_generation():
     print(f'...Quadrant Averages: Klingons: {sum(k)/1000/64:.3f} - Bases: {sum(b)/1000/64:.3f}')
     print(f'...T9 Average: {sum(t9)/1000:.2f}')
 
+def check_region_names():
+    """Test the Quadrant names and numbers"""
+    game = Game()
+    for i in range(1,9):
+        for j in range(1,9):
+            print(f'{i},{j}: {game.region_name(i, j)}')
+
 if __name__ == "__main__":
-    # DEBUG_MODE = {"play", "check_random", "check_T9", "check_galaxy_generation", "print_galaxy"}
+    # DEBUG_MODE = {"play", 
+    #               "check_random", 
+    #               "check_T9", 
+    #               "check_galaxy_generation", 
+    #               "print_galaxy", 
+    #               "check_region_names"}
     DEBUG_MODE = {"check_galaxy_generation", "print_galaxy"}
+    DEBUG_MODE = {}
 
     if "check_random" in DEBUG_MODE:
         check_randomness()
@@ -240,11 +337,7 @@ if __name__ == "__main__":
 
     if "play" in DEBUG_MODE:
         game = Game()
-        game.reset()
-        game.setup_galaxy()
-        game.fix_up_galaxy()
-        game.print_orders()
-        print(game)
+        game.play()
 
     if "print_galaxy" in DEBUG_MODE:
         game = Game()
@@ -252,3 +345,6 @@ if __name__ == "__main__":
         game.setup_galaxy()
         game.fix_up_galaxy()
         game.print_galaxy()
+
+    if "check_region_names" in DEBUG_MODE:
+        check_region_names()
