@@ -32,9 +32,11 @@ class Game:
         self.P = self.P0 = 10
         self.S9 = 200
         self.S = 0
-        # NOTE: The original game strted with Bases = 2, I think it was a typo
-        # I have started with 0 and let the latter self.setup_galaxy & self.fix_up_galaxy
-        # set the randomized number of Bases in the galaxy.
+        # NOTE: The original BASIC sets Bases = 2 initially, which seems to be a
+        # leftover from an older version of the game. The galaxy always starts
+        # empty and bases are only added by setup_galaxy, so Bases should count
+        # actual bases. We start at 0 and let setup_galaxy + fix_up_galaxy
+        # populate it.
         self.Bases = 0
         self.Klingons = 0
 
@@ -84,7 +86,7 @@ class Game:
         return random.randint(1, 8)
 
     def setup_galaxy(self):
-        """Populate G and Z from BASIC 810-1160."""
+        """Populate G and Z from BASIC 810-1040."""
         # SETUP WHAT EXISTS IN GALAXY…
         for i in range(1,9):
             for j in range(1,9):
@@ -110,28 +112,29 @@ class Game:
         # At least 1 Base should exist...
         if not self.Bases:
             if self.G[self.Q1][self.Q2] < 200:
-    # NOTE: The original BASIC adds +120 here, which is a transcription bug:
-    # it adds 1 Klingon (hundreds) and 2 bases (tens) to this quadrant.
-    # Combined with the +10 below, the final quadrant has 3 bases but the
-    # global counter says 1. This is how the original has always behaved.
-    # I will use the "obviously intended" behaviour, so I use +100 instead.
+                # NOTE: The original BASIC adds +120 here, which is a transcription bug:
+                # it adds 1 Klingon (hundreds) and 2 bases (tens) to this quadrant.
+                # Combined with the +10 below, the final quadrant has 3 bases but the
+                # global counter says 1. This is how the original has always behaved.
+                # I will use the "obviously intended" behaviour, so I use +100 instead.
                 # self.G[self.Q1][self.Q2] += 120
                 self.G[self.Q1][self.Q2] += 100
                 self.Klingons += 1
             self.Bases = 1
             self.G[self.Q1][self.Q2] += 10
-            # Set another random starting Quadrant for Entreprise
+
+            # Set another random starting Quadrant for Enterprise
             self.Q1 = self.fnr(1)
             self.Q2 = self.fnr(1)
 
         self.K7 = self.Klingons
 
-        # Is there enought time?
-        # NOTE: I have moved the `enought time` after Bases checking
+        # Is there enough time?
+        # NOTE: I have moved the `enough time` after Bases checking
         # because the number of Klingons can change (added 1) and there 
-        # could not be enought time, so better do it with the final
+        # could not be enough time, so better do it with the final
         # Klingons count...
-        # NOTE: Also, I have changed the comparison fron `>` to `>=`
+        # NOTE: Also, I have changed the comparison from `>` to `>=`
         # to always allow at least one more day than Klingons.
         if self.Klingons >= self.T9:
             self.T9 = self.Klingons + 1
@@ -150,6 +153,7 @@ class Game:
         print()
 
     def print_galaxy(self):
+        """Quick print of the Klingons-Bases-Stars distribution"""
         for i in range(1,9):
             for j in range(1,9):
                 print(f'{self.G[i][j]:03d} ', end="")
@@ -162,9 +166,12 @@ class Game:
 \tKlingons: {self.Klingons} - Bases: {self.Bases}'
 
 def check_T9_range():
+    """Test the T9 range of the game with all the set ups & fixes"""
     counts = dict()
     for _ in range(10_000):
         game = Game()
+        game.setup_galaxy()
+        game.fix_up_galaxy()
         if game.T9 not in counts:
             counts[game.T9] = 0
         counts[game.T9] += 1
@@ -176,15 +183,18 @@ def check_T9_range():
         print('T9 Indices look Ok.')
 
 def check_T9_only():
+    """Test random T9 generation to check boundaries"""
     c = Counter(25 + random.randint(0, 9) for _ in range(10_000))
     print(f'Check T9 only (not the complete game): {c}')
 
-def check_ramdomness():
+def check_randomness():
+    """Test Initial game randomness"""
     for _ in range(3):
         game = Game()
         print(game)
 
 def check_galaxy_generation():
+    """Test invariants & averages"""
     game = Game()
     k = []
     b = []
@@ -216,10 +226,10 @@ def check_galaxy_generation():
 
 if __name__ == "__main__":
     # DEBUG_MODE = {"play", "check_random", "check_T9", "check_galaxy_generation", "print_galaxy"}
-    DEBUG_MODE = ["check_galaxy_generation", "print_galaxy"]
+    DEBUG_MODE = {"check_galaxy_generation", "print_galaxy"}
 
     if "check_random" in DEBUG_MODE:
-        check_ramdomness()
+        check_randomness()
 
     if "check_T9" in DEBUG_MODE:
         check_T9_range()
