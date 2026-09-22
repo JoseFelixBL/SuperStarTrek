@@ -162,7 +162,53 @@ class Game:
     def enter_quadrant(self):
         """1300 - 1600
         Now entering X Quadrant"""
-        pass
+
+        # 1300
+        I = random.random()
+        local_klingons = 0
+        local_bases = 0
+        local_stars = 0
+        G5 = 0
+        D4 = .5 * random.random()
+        self.Z[self.Q1][self.Q2] = self.G[self.Q1][self.Q2]
+
+        # 1390
+        # When can this condition happen? Out of range indices? What does it mean?
+        if not (self.Q1 < 1 or self.Q1 > 8 or self.Q2 < 1 or self.Q2 > 8):
+
+            # 1430
+            g2_quadrant_name = self.region_name(self.Q1, self.Q2)
+            print()
+            if self.T0 != self.T:
+                print(f'NOW ENTERING {g2_quadrant_name} QUADRANT . . .')
+            else:
+                print(f'YOUR MISSION BEGINS WITH YOUR STARSHIP LOCATED')
+                print(F'IN THE GALACTIC QUADRANT {g2_quadrant_name}.')
+
+            # 1500
+            print()
+            local_klingons = self.G[self.Q1][self.Q2] // 100
+            local_bases = self.G[self.Q1][self.Q2] // 10 % 10
+            local_stars = self.G[self.Q1][self.Q2] % 10
+
+            if local_klingons:
+                print(f'COMBAT AREA      CONDITION RED')
+                if self.S <= 200:
+                    print('   SHIELDS DANGEROUSLY LOW')
+                for i in range(1,3):
+                    self.K[i][1] = 0
+                    self.K[i][2] = 0
+
+            # 1600
+            if self.Q1 < 1 or self.Q1 > 8 or self.Q2 < 1 or self.Q2 > 8:
+                for i in range(1,3):
+                    self.K[i][3] = 0
+
+        for i in range(1,3):
+            self.K[i][3] = 0
+
+        # What is this?
+        # Q$ = Z$+Z$+Z$+Z$+Z$+Z$+Z$+LEFT$(Z$,17)  
 
     def setup_quadrant(self):
         """1660 - 1910
@@ -247,6 +293,8 @@ class Game:
         self.setup_galaxy()
         self.fix_up_galaxy()
         self.print_orders()
+        self.enter_quadrant()
+        self.setup_quadrant()
 
 
 def check_T9_range():
