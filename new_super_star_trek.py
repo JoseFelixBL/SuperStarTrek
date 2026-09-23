@@ -70,6 +70,7 @@ class Game:
 
         # --- Other Object state variables, and initializations
         self.K7 = 0
+        self.Q_str = ""         # Quadrant I am in now
 
     def fnd(self, i):
         """Distance from Klingon i to Enterprise.
@@ -159,9 +160,18 @@ class Game:
                 print(f'{self.G[i][j]:03d} ', end="")
             print()
 
+    def __print_quadrant__(self):
+        """Quick print of actual quadrant to check"""
+        for i in range(1,9):
+            for j in range(1,9):
+                print(f'{self.Q_str[i][j]}', end="")
+            print()
+
     def enter_quadrant(self):
         """1300 - 1600
-        Now entering X Quadrant"""
+        Now entering X Quadrant
+        Return local_klingons, local_bases, local_stars
+        """
 
         # 1300
         I = random.random()
@@ -207,13 +217,164 @@ class Game:
         for i in range(1,3):
             self.K[i][3] = 0
 
-        # What is this?
         # Q$ = Z$+Z$+Z$+Z$+Z$+Z$+Z$+LEFT$(Z$,17)  
+        # self.Q_str = self.Z_str * 7 + self.Z_str[:17]
+        self.Q_str = [["   "] * 9 for _ in range(9)]
+        
+        return local_klingons, local_bases, local_stars
 
-    def setup_quadrant(self):
+    def setup_quadrant(self, local_klingons, local_bases, local_stars):
         """1660 - 1910
-        Place objects in sector grid"""
-        pass
+        Place objects, local_klingons, local_bases, local_stars,
+        in sector grid"""
+        # Position Enterprise in Quadrant, then place all the Klingons, 
+        # the Bases, and the Stars elsewhere.
+        
+        # Enterprise:
+        A_str = "<*>"
+        Z1 = self.S1
+        Z2 = self.S2
+
+        # Gosub 8670
+        self.insert_in_quadrant_string(A_str, Z1, Z2)
+
+        # Klingons:
+        if local_klingons:
+            for i in range(1, local_klingons + 1):
+
+                # Gosub 8590 - find_empty_place_in_quadrant():
+                R1, R2 = self.find_empty_place_in_quadrant()
+
+                A_str = "+K+"
+                Z1 = R1
+                Z2 = R2
+
+                # Gosub 8670
+                self.insert_in_quadrant_string(A_str, Z1, Z2)
+
+                self.K[i][1] = R1
+                self.K[i][2] = R2
+                self.K[i][3] = self.S9 * (0.5 + random.random())
+
+        # Bases:
+        if local_bases:
+            for i in range(1, local_bases + 1):
+
+                # Gosub 8590 - find_empty_place_in_quadrant():
+                R1, R2 = self.find_empty_place_in_quadrant()
+
+                A_str = ">!<"
+                Z1 = R1
+                B4 = R1
+                Z2 = R2
+                B5 = R2
+
+                # Gosub 8670
+                self.insert_in_quadrant_string(A_str, Z1, Z2)
+
+        # Stars:
+        if local_stars:
+            for i in range(1, local_stars):
+
+                # Gosub 8590 - find_empty_place_in_quadrant():
+                R1, R2 = self.find_empty_place_in_quadrant()
+
+                A_str = " * "
+                Z1 = R1
+                Z2 = R2
+
+                # Gosub 8670
+                self.insert_in_quadrant_string(A_str, Z1, Z2)
+
+        # Gosub 6430 - srs_scan_and_startup()
+
+    def insert_in_quadrant_string(self, a_str, z1, z2):
+        """
+        BASIC: 8670
+        INSERT IN STRING ARRAY FOR QUADRANT
+        """
+        # s8 = int(z2 - .5) * 3 + int(z1 - .5) * 24 + 1
+        # if len(a_str) != 3:
+            # print('ERROR')
+            # quit()
+
+        # if s8 == 1:
+            # return a_str + self.Q_str[-189:]
+
+        # if s8 == 190:
+            # return self.Q_str[:189] + a_str
+
+        # self.Q_str[:s8 - 1] + a_str + self.Q_str[-(190 - s8):]
+        self.Q_str[z1][z2] = a_str
+
+    def find_empty_place_in_quadrant(self):
+        """8590
+        FIND EMPTY PLACE IN QUADRANT (FOR THINGS)
+        Return tuple(r1, r2) = sector's empty space coordinates
+        """
+        r1 = r2 = 0
+        found = False
+        A_str = "   "
+        while not found:
+            r1 = self.fnr(1)
+            r2 = self.fnr(1)
+            Z1 = r1
+            Z2 = r2
+
+            # Gosub 8830 - string_comparison_in_quadrant_array()
+            found = self.string_comparison_in_quadrant_array(A_str, Z1, Z2)
+        return (r1, r2)
+
+
+    def string_comparison_in_quadrant_array(self, a_str, z1, z2):
+        """8830
+        Return True if z1, z2 coordinates are the same as a_str
+        else return False
+        """
+        # z1 = int(z1 + .5)
+        # z2 = int(z2 + .5)
+        # s8 = (z2 - 1) *3 + (z1 - 1) * 24 + 1
+        
+        # return self.Q_str[s8-1:s8 + 3] == a_str
+        return self.Q_str[z1][z2] == a_str
+
+
+    def srs_scan_and_startup(self):
+        """6430
+        SHORT RANGE SENSOR SCAN & STARTUP SUBROUTINE"""
+        for i in range(self.S1 - 2, self.S1 + 1):
+            for j in range(self.S2 - 2, self.S2 + 1):
+                if int(i + .5) < 1 or int(i + .5) > 8 or int(j + .5) < 1 or int(j + .5) > 8:
+                    continue
+                a_str = ">!<"
+                Z1 = i
+                Z2 = j
+                # Gosub 8830
+                if string_comparison_in_quadrant_array(a_str, Z1, Z2):
+                    self.D0 = 1
+                    C_str = "DOCKED"
+                    E = self.E0
+                    P = self.P0
+                    print('SHIELDS DROPPED FOR DOCKING PURPOSES')
+                    S = 0
+                    self.D0 = 0
+                    if self.D[2] < 0:
+                        print()
+                        print('*** SHORT RANGE SENSORS ARE OUT ***')
+                        print()
+                        return
+                    O1_str = '-' * 33
+                    print(O1_str)
+
+                    break
+        else:
+            self.D0 = 0
+            if local_klingons:
+                C_str = "RED"
+                # Repensar cómo dividir esto en subrutinas !!!!!!!!!!!!!!!!!!!
+                # Hacerlo escribiendo
+            
+
 
     def srs_display(self):
         """6430 - 7260
@@ -225,12 +386,21 @@ class Game:
         Docking check"""
         pass
 
-    def region_name(self, z4, z5, g5=0):
-        """9010 - 9300
+    def region_name(self, z4, z5, region_only=False):
+        """Return the region name for quadrant (z4, z5)
+        BASIC: 9010 - 9300
         z4: Q1
         z5: Q2
-        g5: == 1, return region name only!
-        Return a region name, plus region number, optionally no region number"""
+        region_only: Bool, formerly g5: == 1, return region name only!
+        RETURN a region name, plus region number, optionally no region number
+        EXAMPLES:
+        region_name(1, 1) -> "ANTARES I"
+        region_name(1, 1, True) -> "ANTARES"
+        region_name(1, 5) -> "ANTARES I"    (because 5 % 4 == 1)
+        region_name(8, 8) -> "SPICA IV"
+        """
+
+        g2 = ""
         if z5 <= 4:
             match z4:
                 case 1:
@@ -258,7 +428,7 @@ class Game:
                 case 3:
                     g2 = "CAPELLA"
                 case 4:
-                    g2 = "BETELGUEUSE"
+                    g2 = "BETELGEUSE"
                 case 5:
                     g2 = "ALDEBARAN"
                 case 6:
@@ -268,8 +438,9 @@ class Game:
                 case 8:
                     g2 = "SPICA"
 
-        if g5 == 1:
+        if region_only:
             return g2
+
         match z5:
             case 1|5:
                 g2 += " I"
@@ -293,8 +464,10 @@ class Game:
         self.setup_galaxy()
         self.fix_up_galaxy()
         self.print_orders()
-        self.enter_quadrant()
-        self.setup_quadrant()
+        klingons, bases, stars = self.enter_quadrant()
+        self.setup_quadrant(klingons, bases, stars )
+        self.__print_quadrant__()
+
 
 
 def check_T9_range():
@@ -371,7 +544,7 @@ if __name__ == "__main__":
     #               "print_galaxy", 
     #               "check_region_names"}
     DEBUG_MODE = {"check_galaxy_generation", "print_galaxy"}
-    DEBUG_MODE = {}
+    DEBUG_MODE = {"play"}
 
     if "check_random" in DEBUG_MODE:
         check_randomness()
