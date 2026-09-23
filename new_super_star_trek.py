@@ -1,15 +1,31 @@
-# Nuevo intento de porte de Super Star Trek de BBC BASIC a Python
+#
+# Nuevo intento de porte de Super Star Trek de BBC BASIC a Python.
+# Intentaré mantener en lo posible la estructura y las variables del 
+# original, MENOS en los casos en los que Python ofrezca una alternativa
+# más sencilla de usar y comprender.
+#
 import random
 import math
 from collections import Counter
 
-# Usaremos OOP para la programación del juego
+# We will use OOP as it gives us the advantage of accessing context variables
+# without the need to mark them as Globals or sending long structs or
+# prameter lists between functions.
+
 class Game:
+    ENTERPRISE = "<*>"
+    KLINGON = "+k+"
+    BASE = ">!<"
+    STAR = " * "
+    EMPYT_SPACE = "   "
+
     def __init__(self):
-        """Reset all state to start a new game. BASIC lines 330-710."""
         self.reset()
 
     def reset(self):
+        """BASIC 330 - 710
+        Reset all state to start a new game.
+        """
         # --- Strings (BASIC variables ending in $) ---
         self.Z_str = " "*25                     # Z$
         self.X_str = ""                         # X$
@@ -32,10 +48,11 @@ class Game:
         self.P = self.P0 = 10
         self.S9 = 200
         self.S = 0
+
         # NOTE: The original BASIC sets Bases = 2 initially, which seems to be a
         # leftover from an older version of the game. The galaxy always starts
-        # empty and bases are only added by setup_galaxy, so Bases should count
-        # actual bases. We start at 0 and let setup_galaxy + fix_up_galaxy
+        # empty and bases are only added by setup_galaxy(), so Bases should count
+        # actual bases. We start at 0 and let setup_galaxy() + fix_up_galaxy()
         # populate it.
         self.Bases = 0
         self.Klingons = 0
@@ -73,7 +90,8 @@ class Game:
         self.Q_str = ""         # Quadrant I am in now
 
     def fnd(self, i):
-        """Distance from Klingon i to Enterprise.
+        """BASIC 470
+        Distance from Klingon i to Enterprise.
         BASIC: DEFFND(D) = SQR((K(I,1)-S1)^2 + (K(I,2)-S2)^2)
         Note: BASIC used a global I; we pass it explicitly — a deliberate fix.
         """
@@ -81,13 +99,16 @@ class Game:
                          (self.K[i][2] - self.S2) ** 2)
 
     def fnr(self, _=1):
-        """Random integer 1..8. BASIC: FNR(R) = INT(RND(R)*7.98 + 1.01).
+        """BASIC 475
+        Random integer 1..8. BASIC: FNR(R) = INT(RND(R)*7.98 + 1.01).
         The BASIC argument is essentially ignored; we keep the param for fidelity.
         """
         return random.randint(1, 8)
 
     def setup_galaxy(self):
-        """Populate G and Z from BASIC 810-1040."""
+        """BASIC 810 - 1040
+        Populate G (Galaxy) and Z (Known Galaxy) with Klingons, Bases, Stars.
+        """
         # SETUP WHAT EXISTS IN GALAXY…
         for i in range(1,9):
             for j in range(1,9):
@@ -105,11 +126,13 @@ class Game:
                 local_bases = 1 if random.random() > .96 else 0
                 self.Bases += local_bases
 
+                # the self.fnr(1) are the Stars on each Quadrant.
                 self.G[i][j] = local_klingons * 100 + local_bases * 10 + self.fnr(1)
 
     def fix_up_galaxy(self):
-        """Ensure at least one starbase and enough time. BASIC 1100-1160."""
-
+        """BASIC 1100-1160
+        Ensure at least one starbase and enough time.
+        """
         # At least 1 Base should exist...
         if not self.Bases:
             if self.G[self.Q1][self.Q2] < 200:
@@ -168,13 +191,16 @@ class Game:
             print()
 
     def enter_quadrant(self):
-        """1300 - 1600
-        Now entering X Quadrant
-        Return local_klingons, local_bases, local_stars
         """
-
-        # 1300
-        I = random.random()
+        BASIC 1300 - 1600
+        Now entering X Quadrant...
+        RETURN Tuple: local_klingons, local_bases, local_stars
+        """
+        # 1300 - Not used... commented until found the utility of I = random.random()
+        # I = random.random()
+        # Also not sure if Z4 & Z5 are needed in the Python port...
+        # Z4 = self.Q1
+        # Z5 = self.Q2
         local_klingons = 0
         local_bases = 0
         local_stars = 0
@@ -192,6 +218,7 @@ class Game:
             if self.T0 != self.T:
                 print(f'NOW ENTERING {g2_quadrant_name} QUADRANT . . .')
             else:
+                # Instructions printed at the begining of the game
                 print(f'YOUR MISSION BEGINS WITH YOUR STARSHIP LOCATED')
                 print(F'IN THE GALACTIC QUADRANT {g2_quadrant_name}.')
 
@@ -205,33 +232,34 @@ class Game:
                 print(f'COMBAT AREA      CONDITION RED')
                 if self.S <= 200:
                     print('   SHIELDS DANGEROUSLY LOW')
-                for i in range(1,3):
-                    self.K[i][1] = 0
-                    self.K[i][2] = 0
+            for i in range(1,3):
+                self.K[i][1] = 0
+                self.K[i][2] = 0
 
             # 1600
-            if self.Q1 < 1 or self.Q1 > 8 or self.Q2 < 1 or self.Q2 > 8:
-                for i in range(1,3):
-                    self.K[i][3] = 0
+            for i in range(1,3):
+                self.K[i][3] = 0
 
         for i in range(1,3):
             self.K[i][3] = 0
 
+        # Python's 2D list to represent the Quadrant instead of big string...
         # Q$ = Z$+Z$+Z$+Z$+Z$+Z$+Z$+LEFT$(Z$,17)  
         # self.Q_str = self.Z_str * 7 + self.Z_str[:17]
-        self.Q_str = [["   "] * 9 for _ in range(9)]
+        self.Q_str = [[self.EMPYT_SPACE] * 9 for _ in range(9)]
         
         return local_klingons, local_bases, local_stars
 
     def setup_quadrant(self, local_klingons, local_bases, local_stars):
-        """1660 - 1910
+        """"BASIC 1660 - 1910
         Place objects, local_klingons, local_bases, local_stars,
-        in sector grid"""
+        in sector grid
+        """
         # Position Enterprise in Quadrant, then place all the Klingons, 
         # the Bases, and the Stars elsewhere.
         
         # Enterprise:
-        A_str = "<*>"
+        A_str = self.ENTERPRISE
         Z1 = self.S1
         Z2 = self.S2
 
@@ -245,7 +273,7 @@ class Game:
                 # Gosub 8590 - find_empty_place_in_quadrant():
                 R1, R2 = self.find_empty_place_in_quadrant()
 
-                A_str = "+K+"
+                A_str = self.KLINGON
                 Z1 = R1
                 Z2 = R2
 
@@ -263,7 +291,7 @@ class Game:
                 # Gosub 8590 - find_empty_place_in_quadrant():
                 R1, R2 = self.find_empty_place_in_quadrant()
 
-                A_str = ">!<"
+                A_str = self.BASE
                 Z1 = R1
                 B4 = R1
                 Z2 = R2
@@ -279,16 +307,17 @@ class Game:
                 # Gosub 8590 - find_empty_place_in_quadrant():
                 R1, R2 = self.find_empty_place_in_quadrant()
 
-                A_str = " * "
+                A_str = self.STAR
                 Z1 = R1
                 Z2 = R2
 
                 # Gosub 8670
                 self.insert_in_quadrant_string(A_str, Z1, Z2)
 
-        # Gosub 6430 - srs_scan_and_startup()
+        # Gosub 6430 - srs_scan_and_startup(local_klingons)
+        self.srs_scan_and_startup(local_klingons)
 
-    def insert_in_quadrant_string(self, a_str, z1, z2):
+    def insert_in_quadrant_string(self, space_object, z1, z2):
         """
         BASIC: 8670
         INSERT IN STRING ARRAY FOR QUADRANT
@@ -305,30 +334,31 @@ class Game:
             # return self.Q_str[:189] + a_str
 
         # self.Q_str[:s8 - 1] + a_str + self.Q_str[-(190 - s8):]
-        self.Q_str[z1][z2] = a_str
+        self.Q_str[z1][z2] = space_object
 
     def find_empty_place_in_quadrant(self):
         """8590
         FIND EMPTY PLACE IN QUADRANT (FOR THINGS)
-        Return tuple(r1, r2) = sector's empty space coordinates
+        RETURN tuple(r1, r2) = sector's empty space coordinates
         """
         r1 = r2 = 0
         found = False
-        A_str = "   "
+        A_str = self.EMPYT_SPACE
         while not found:
             r1 = self.fnr(1)
             r2 = self.fnr(1)
             Z1 = r1
             Z2 = r2
 
-            # Gosub 8830 - string_comparison_in_quadrant_array()
-            found = self.string_comparison_in_quadrant_array(A_str, Z1, Z2)
+            # Gosub 8830 - is_object_in_coordinates()
+            found = self.is_object_in_coordinates(A_str, Z1, Z2)
         return (r1, r2)
 
 
-    def string_comparison_in_quadrant_array(self, a_str, z1, z2):
+    def is_object_in_coordinates(self, looking_for, z1, z2):
         """8830
-        Return True if z1, z2 coordinates are the same as a_str
+        looking_for: <*>, >!<, +k+, " * ", "   "
+        RETURN True if z1, z2 coordinates content is the same as looking_for
         else return False
         """
         # z1 = int(z1 + .5)
@@ -336,44 +366,81 @@ class Game:
         # s8 = (z2 - 1) *3 + (z1 - 1) * 24 + 1
         
         # return self.Q_str[s8-1:s8 + 3] == a_str
-        return self.Q_str[z1][z2] == a_str
+        return self.Q_str[z1][z2] == looking_for
 
 
-    def srs_scan_and_startup(self):
-        """6430
-        SHORT RANGE SENSOR SCAN & STARTUP SUBROUTINE"""
-        for i in range(self.S1 - 2, self.S1 + 1):
-            for j in range(self.S2 - 2, self.S2 + 1):
+    def srs_scan_and_startup(self, local_klingons):
+        """BASIC 6430
+        SHORT RANGE SENSOR SCAN & STARTUP SUBROUTINE
+        """
+        for i in range(self.S1 - 1, self.S1 + 2):
+            for j in range(self.S2 - 1, self.S2 + 2):
                 if int(i + .5) < 1 or int(i + .5) > 8 or int(j + .5) < 1 or int(j + .5) > 8:
                     continue
-                a_str = ">!<"
+                a_str = self.BASE
                 Z1 = i
                 Z2 = j
+
                 # Gosub 8830
-                if string_comparison_in_quadrant_array(a_str, Z1, Z2):
+                if self.is_object_in_coordinates(a_str, Z1, Z2):
+                    # 6580 Docked to Base
                     self.D0 = 1
                     C_str = "DOCKED"
-                    E = self.E0
-                    P = self.P0
+                    self.E = self.E0
+                    self.P = self.P0
                     print('SHIELDS DROPPED FOR DOCKING PURPOSES')
-                    S = 0
-                    self.D0 = 0
-                    if self.D[2] < 0:
-                        print()
-                        print('*** SHORT RANGE SENSORS ARE OUT ***')
-                        print()
-                        return
-                    O1_str = '-' * 33
-                    print(O1_str)
-
+                    self.S = 0
                     break
         else:
             self.D0 = 0
             if local_klingons:
                 C_str = "RED"
-                # Repensar cómo dividir esto en subrutinas !!!!!!!!!!!!!!!!!!!
-                # Hacerlo escribiendo
-            
+            else:
+                C_str = "GREEN"
+                if E < self.E0 * .1:
+                    C_str = "YELLOW"
+
+        # 6720 - Check if SRS is Damaged
+        if self.D[2] < 0:
+            # SRS Damaged! Cannot shhow Anything...
+            print()
+            print('*** SHORT RANGE SENSORS ARE OUT ***')
+            print()
+            return
+
+        # 6770 - Print SRS info
+        O1_str = '-' * 33
+
+        # enterprise_headers & enterprise_info for easier printing in TTY
+        enterprise_headers = {
+            1: "        STARDATE           ",
+            2: "        CONDITION          ",
+            3: "        QUADRANT           ",
+            4: "        SECTOR             ",
+            5: "        PHOTON TORPEDOES   ",
+            6: "        TOTAL ENERGY       ",
+            7: "        SHIELDS            ",
+            8: "        KLINGONS REMAINING "
+        }
+
+        enterprise_info = {
+            1: f'{int(self.T * 10) * .1}',
+            2: f'{C_str}',
+            3: f'{self.Q1}, {self.Q2}',
+            4: f'{self.S1}, {self.S2}',
+            5: f'{int(self.P)}',
+            6: f'{int(self.E + self.S)}',
+            7: f'{int(self.S)}',
+            8: f'{int(self.Klingons)}',
+        }
+
+        print(O1_str)
+        for row in range(1,9):
+            for column in range(1, 9):
+                print(f' {self.Q_str[row][column]}', end="")
+            print(f'{enterprise_headers.get(row)}{enterprise_info.get(row)}')
+        print(O1_str)
+        return
 
 
     def srs_display(self):
@@ -466,7 +533,8 @@ class Game:
         self.print_orders()
         klingons, bases, stars = self.enter_quadrant()
         self.setup_quadrant(klingons, bases, stars )
-        self.__print_quadrant__()
+
+        # self.__print_quadrant__()
 
 
 
