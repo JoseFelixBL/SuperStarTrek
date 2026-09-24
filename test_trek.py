@@ -1,3 +1,9 @@
+"""Sanity checks and invariants for the Super Star Trek port."""
+
+import random
+from collections import Counter
+
+from game import Game
 
 def check_T9_range():
     """Test the T9 range of the game with all the set ups & fixes"""
@@ -70,3 +76,13 @@ def check_region_names():
     assert game.region_name(1, 1) == "ANTARES I"
     assert game.region_name(1, 1, region_only=True) == "ANTARES"
     assert game.region_name(8, 8) == "SPICA IV" 
+
+
+
+if __name__ == "__main__":
+    print('Running all test')
+    check_randomness()
+    check_T9_range()
+    check_T9_only()
+    check_galaxy_generation()
+    print('All tests passed')

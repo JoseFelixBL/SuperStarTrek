@@ -1,15 +1,32 @@
+"""Super Star Trek — Game class.
+
+Ported from the BBC BASIC listing (May 1978 / Nov 2023 port).
+"""
+
+import random
+import math
+
+DEBUG_VIEW = True
+
+def basic_range(start, end):
+    """BASIC FOR I = start TO end, inclusive."""
+    return range(start, end + 1)
+
+
+# We will use OOP as it gives us the advantage of accessing context variables
+# without the need to mark them as Globals or sending long structs or
+# prameter lists between functions.
+
 
 class Game:
 
 
     def __init__(self):
-        self.DEBUG = True
         self.ENTERPRISE = "<*>"
         self.KLINGON = "+K+"
         self.BASE = ">!<"
         self.STAR = " * "
-        # DEBUG ONLY - empty space depicted as 3 dots for easier viewing
-        self.EMPTY_SPACE = "..." if self.DEBUG else "   "
+        self.EMPTY_SPACE = "..." if DEBUG_VIEW else "   "
         self.reset()
 
 
@@ -309,7 +326,7 @@ class Game:
         # Gosub 6430 - srs_scan_and_startup(self.local_klingons)
         self.srs_scan_and_startup()
 
-        if self.DEBUG:
+        if DEBUG_VIEW:
             # DEBUG ONLY - print the actual Galaxy to check the number
             # of objects vs. the ones printed
             self.debug_print_galaxy()
@@ -470,7 +487,7 @@ class Game:
         }
 
         # DEBUG ONLY - put a `|` to "see" the space.
-        sector_sep = '|' if self.DEBUG else ' '
+        sector_sep = '|' if DEBUG_VIEW else ' '
         print(O1_str)
         for row in basic_range(1, 8):
             for column in basic_range(1, 8):
