@@ -17,7 +17,9 @@ class Game:
     KLINGON = "+K+"
     BASE = ">!<"
     STAR = " * "
-    EMPTY_SPACE = "   "
+    # EMPTY_SPACE = "   "
+    # DEBUG ONLY - empty space depicted as 3 dots for easier viewing
+    EMPTY_SPACE = "..."
 
     def __init__(self):
         self.reset()
@@ -87,7 +89,7 @@ class Game:
 
         # --- Other Object state variables, and initializations
         self.K7 = 0
-        self.Q_str = [["   "] * 9 for _ in range(9)]    # Quadrant I am in now
+        self.Q_str = [[self.EMPTY_SPACE] * 9 for _ in range(9)]    # Quadrant I am in now
         self.D4 = 0.0
         self.G5 = 0
 
@@ -180,20 +182,6 @@ class Game:
         print(f'  {self.Bases} STARBASE{self.X_str} IN THE GALAXY FOR RESUPPLYING YOUR SHIP')
         print()
 
-    def debug_print_galaxy(self):
-        """Quick print of the Klingons-Bases-Stars distribution"""
-        for i in self.basic_range(1,8):
-            for j in self.basic_range(1,8):
-                print(f'{self.G[i][j]:03d} ', end="")
-            print()
-
-    def debug_print_quadrant(self):
-        """Quick print of actual quadrant to check"""
-        for i in self.basic_range(1,8):
-            for j in self.basic_range(1,8):
-                print(f'{self.Q_str[i][j]}', end="")
-            print()
-
     def enter_quadrant(self):
         """
         BASIC 1300 - 1600
@@ -210,7 +198,7 @@ class Game:
         local_stars = 0
         self.G5 = 0
         self.D4 = .5 * random.random()
-        self.update_know_galaxy()
+        self.update_known_galaxy()
 
         # 1390
         # if not (self.Q1 < 1 or self.Q1 > 8 or self.Q2 < 1 or self.Q2 > 8):
@@ -225,7 +213,7 @@ class Game:
         
         return local_klingons, local_bases, local_stars
 
-    def update_know_galaxy(self):
+    def update_known_galaxy(self):
         self.Z[self.Q1][self.Q2] = self.G[self.Q1][self.Q2]
 
     def print_quadrant_entry(self, local_klingons):
@@ -265,7 +253,7 @@ class Game:
 
     def setup_quadrant(self, local_klingons, local_bases, local_stars):
         """"BASIC 1660 - 1910
-        Place objects, local_klingons, local_bases, local_stars,
+        Place objects: local_klingons, local_bases, local_stars,
         in sector grid
         """
         # Position Enterprise in Quadrant, then place all the Klingons, 
@@ -321,6 +309,10 @@ class Game:
 
         # Gosub 6430 - srs_scan_and_startup(local_klingons)
         self.srs_scan_and_startup(local_klingons)
+
+        # DEBUG ONLY - print the actual Galaxy to check the number
+        # of objects vs. the ones printed
+        self.debug_print_galaxy()
 
     def insert_in_quadrant(self, space_object, row, column):
         """
@@ -461,7 +453,9 @@ class Game:
         print(O1_str)
         for row in self.basic_range(1, 8):
             for column in self.basic_range(1, 8):
-                print(f' {self.Q_str[row][column]}', end="")
+                # print(f' {self.Q_str[row][column]}', end="")
+                # DEBUG ONLY - put a `|` to "see" the space.
+                print(f'|{self.Q_str[row][column]}', end="")
             print(f'{enterprise_headers[row]}{enterprise_info[row]}')
         print(O1_str)
         return
@@ -517,6 +511,21 @@ class Game:
 \tToday: {self.T} - Start Date: {self.T0} - Total Avail. Time: {self.T9}\n\
 \tQuadrant: [{self.Q1}, {self.Q2}], Sector: [{self.S1}, {self.S2}]\n\
 \tKlingons: {self.Klingons} - Bases: {self.Bases}'
+
+    def debug_print_galaxy(self):
+        """Quick print of the Klingons-Bases-Stars distribution"""
+        print('\n>>>>> DEBUG PRINT OF THE GALAXY <<<<<\n')
+        for i in self.basic_range(1,8):
+            for j in self.basic_range(1,8):
+                print(f'{self.G[i][j]:03d} ', end="")
+            print()
+
+    def debug_print_quadrant(self):
+        """Quick print of actual quadrant to check"""
+        for i in self.basic_range(1,8):
+            for j in self.basic_range(1,8):
+                print(f'{self.Q_str[i][j]}', end="")
+            print()
 
     def play(self):
         """Play the game"""
