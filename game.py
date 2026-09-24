@@ -6,8 +6,6 @@ Ported from the BBC BASIC listing (May 1978 / Nov 2023 port).
 import random
 import math
 
-DEBUG_VIEW = True
-
 def basic_range(start, end):
     """BASIC FOR I = start TO end, inclusive."""
     return range(start, end + 1)
@@ -21,12 +19,8 @@ def basic_range(start, end):
 class Game:
 
 
-    def __init__(self):
-        self.ENTERPRISE = "<*>"
-        self.KLINGON = "+K+"
-        self.BASE = ">!<"
-        self.STAR = " * "
-        self.EMPTY_SPACE = "..." if DEBUG_VIEW else "   "
+    def __init__(self, debug_view=False):
+        self.debug_view = debug_view
         self.reset()
 
 
@@ -34,6 +28,12 @@ class Game:
         """BASIC 330 - 710
         Reset all state to start a new game.
         """
+        self.ENTERPRISE = "<*>"
+        self.KLINGON = "+K+"
+        self.BASE = ">!<"
+        self.STAR = " * "
+        self.EMPTY_SPACE = "..." if self.debug_view else "   "
+
         # --- Strings (BASIC variables ending in $) ---
         self.Z_str = " "*25                     # Z$
         self.X_str = ""                         # X$
@@ -326,7 +326,7 @@ class Game:
         # Gosub 6430 - srs_scan_and_startup(self.local_klingons)
         self.srs_scan_and_startup()
 
-        if DEBUG_VIEW:
+        if self.debug_view:
             # DEBUG ONLY - print the actual Galaxy to check the number
             # of objects vs. the ones printed
             self.debug_print_galaxy()
@@ -487,7 +487,7 @@ class Game:
         }
 
         # DEBUG ONLY - put a `|` to "see" the space.
-        sector_sep = '|' if DEBUG_VIEW else ' '
+        sector_sep = '|' if self.debug_view else ' '
         print(O1_str)
         for row in basic_range(1, 8):
             for column in basic_range(1, 8):
