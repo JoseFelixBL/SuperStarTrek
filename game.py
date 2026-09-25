@@ -539,7 +539,7 @@ class Game:
 
     def debug_print_galaxy(self):
         """Quick print of the Klingons-Bases-Stars distribution"""
-        print('\n>>>>> DEBUG PRINT OF THE GALAXY <<<<<\n')
+        print('\n>> DEBUG PRINT OF THE GALAXY <<\n')
         for i in basic_range(1, 8):
             for j in basic_range(1, 8):
                 print(f'{self.G[i][j]:03d} ', end="")
@@ -554,6 +554,236 @@ class Game:
             print()
 
 
+    def command_loop(self):
+        """
+        BASIC 1990 - 2060
+        """
+        while True:
+            # Line 1990: check for stranded ship
+            if self.S + self.E <= 10 or not (self.E > 10 or self.D[7] == 0):
+                self.print_fatal_error()
+                return
+
+            # Line 2060: read command
+            a_str = input("COMMAND ").strip().upper()[:3]
+
+            # Dispatch
+            if a_str == "NAV":
+                self.cmd_nav()
+            elif a_str == "SRS":
+                self.srs_scan_and_startup()
+            elif a_str == "LRS":
+                self.cmd_lrs()
+            elif a_str == "PHA":
+                self.cmd_pha()
+            elif a_str == "TOR":
+                self.cmd_tor()
+            elif a_str == "SHE":
+                self.cmd_she()
+            elif a_str == "DAM":
+                self.cmd_dam()
+            elif a_str == "COM":
+                self.cmd_com()
+            elif a_str == "XXX":
+                return
+            else:
+                self.print_commands()
+
+
+    def print_fatal_error(self):
+        """
+        BASIC 2020 - 2050
+        """
+        print()
+        print( "** FATAL ERROR **   YOU'VE JUST STRANDED YOUR SHIP IN ")
+        print( "SPACE" )
+        print("YOU HAVE INSUFFICIENT MANEUVERING ENERGY,")
+        print( " AND SHIELD CONTROL" )
+        print( "IS PRESENTLY INCAPABLE OF CROSS")
+        print( "-CIRCUITING TO ENGINE ROOM!!")
+        self.end_of_game()
+
+
+    def end_of_game(self):
+        """
+        BASIC 6220 - 6280
+        """
+        print(f'IT IS STARDATE {self.T}')
+        print(f'THERE WERE {self.Klingons} KLINGON BATTLE CRUISERS LEFT AT')
+        print('THE END OF YOUR MISSION.')
+        self.any_bases_left()
+
+
+    def any_bases_left(self):
+        """
+        BASIC 6290 - 6360
+        """
+        print('\n\n')
+
+        if not self.Bases:
+            quit()
+
+        self.want_to_play_another()
+
+
+    def want_to_play_another(self):
+        """
+        BASIC 6310 - 6360
+        """
+        print("THE FEDERATION IS IN NEED OF A NEW STARSHIP COMMANDER")
+        print("FOR A SIMILAR MISSION -- IF THERE IS A VOLUNTEER,")
+        a_str = input("LET HIM STEP FORWARD AND ENTER 'AYE' ").strip().upper()
+        if a_str == "AYE":
+           self.reset()
+           self.play()
+        quit()
+
+
+    def enterprise_destroyed(self):
+        """
+        BASIC 6240 - 6250
+        """
+        print('THE ENTERPRISE HAS BEEN DESTROYED. THEN FEDERATION ')
+        print('WILL BE CONQUERED')
+        self.end_of_game()
+
+
+    def mission_acomplished(self):
+        """
+        BASIC 6370 - 6400
+        """
+        print("CONGRULATION, CAPTAIN! THEN LAST KLINGON BATTLE CRUISER")
+        print("MENACING THE FDERATION HAS BEEN DESTROYED.")
+        print()
+        print(f"YOUR EFFICIENCY RATING IS {1000 * (self.K7 / (self.T - self.T0)) ** 2}")
+        self.any_bases_left()
+
+
+    def print_commands(self):
+        """
+        BASIC 2060
+        """
+        print("ENTER ONE OF THE FOLLOWING:")
+        print("  NAV  (TO SET COURSE)")
+        print("  SRS  (FOR SHORT RANGE SENSOR SCAN)")
+        print("  LRS  (FOR LONG RANGE SENSOR SCAN)")
+        print("  PHA  (TO FIRE PHASERS)")
+        print("  TOR  (TO FIRE PHOTON TORPEDOES)")
+        print("  SHE  (TO RAISE OR LOWER SHIELDS)")
+        print("  DAM  (FOR DAMAGE CONTROL REPORTS)")
+        print("  COM  (TO CALL ON LIBRARY-COMPUTER)")
+        print("  XXX  (TO RESIGN YOUR COMMAND)")
+        print()
+
+
+    def cmd_nav(self):
+        """
+        BASIC 2300 - 3480
+        """
+
+        course_ok, course = self.select_course()
+        if not course_ok:
+            return
+
+        warp_ok, warp = self.select_warp()
+        if not warp_ok:
+            return
+
+        enough_energy, energy = self.energy_needed(warp)
+        if not enough_energy:
+            return
+
+        self.klingons_move_fire()
+
+    def klingons_move_fire(self):
+        """Basic 2590 - """
+        pass
+
+    def select_course(self):
+        """BASIC 2300 - 2330"""
+        incorrect_course = True
+        course = input("COURSE (0-9)")
+        if not (course.isnumeric()):
+            self.incorrect_course()
+            return incorrect_course, course
+
+        course = int(course)
+        course = 1 if C1 == 9 else course
+        if not (1 <= course < 9):
+            self.incorrect_course()
+            return incorrect_course, course
+
+        incorrect_course = False
+        return incorrect_course, course
+
+
+    def select_warp(self):
+        """BASIC 2350 - 2470"""
+        warp_ok = False
+        max_warp = 8
+        if self.D[1] < 0:
+            max_warp = 0.2
+
+        warp = input(f'WARP FACTOR (0-{max_warp})')
+        # NOTE: Check the input and convert to integer...
+
+        if self.D[1] > 0 and warp > .2:
+            print('WARP ENGINES ARE DAMAGED. MAXIMUM SPEED = WARP 0.2')
+            return warp_ok, warp
+
+        if not(warp > 0 and W1 <= 8):
+            if warp == 0:
+                warp_ok = True
+                return warp_ok, warp
+            print(f"   CHIEF ENGINEER SCOTT REPORTS 'THE ENGINES WON'T TAKE WARP {W1}!'")
+            return warp_ok, warp
+
+
+    def energy_needed(self, warp):
+        """Basic 2490 - 2570"""
+        enough_energy = False
+        needed = int(warp * 8 + .5)
+        if self.E - needed < 0:
+            print( "ENGINEERING REPORTS: 'INSUFFICIENT ENERGY' AVAILABLE")
+            print(f"                      FOR MANEUVERING AT WARP {warp}!'")
+
+            # Can not-damaged Shields lend me enough energy...?
+            if self.S < needed - self.E or self.D[7] < 0:
+                enough_energy = True
+                return enough_energy, needed
+            print(f'DEFLECTOR CONTROL ROOM ACKNOWLEDGES {self.S} UNITS OF ENERGY')
+            print( '                      PRESENTLY DEPLOYED TO SHIELDS.')
+            return enough_energy, needed
+ 
+
+    def incorrect_course(self):
+        print("   LT. SULU REPORTS, 'INCORRECT COURSE DATA, SIR!'")
+
+
+    def cmd_lrs(self):
+        print('... LRS ...')
+
+
+    def cmd_pha(self):
+        print('... PHA ...')
+
+
+    def cmd_tor(self):
+        print('... TOR ...')
+
+
+    def cmd_she(self):
+        print('... SHE ...')
+
+
+    def cmd_dam(self):
+        print('... DAM ...')
+
+
+    def cmd_com(self):
+        print('... COM ...')
+
+
     def play(self):
         """Play the game"""
         self.setup_galaxy()
@@ -561,5 +791,5 @@ class Game:
         self.print_orders()
         self.enter_quadrant()
         self.setup_quadrant()
-
-        # self._print_quadrant()
+        self.command_loop()
+        quit()
