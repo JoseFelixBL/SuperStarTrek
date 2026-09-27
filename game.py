@@ -30,6 +30,7 @@ class Game:
         """
         self.show_uss_enterprise()
 
+        # Space objects...
         self.ENTERPRISE = "<*>"
         self.KLINGON = "+K+"
         self.BASE = ">!<"
@@ -42,22 +43,26 @@ class Game:
         self.X0_str = " IS "                    # X0$
 
         # --- Arrays (BASIC DIM line 330) ---
-        self.G = [[0]*9 for _ in range(9)]      # Galaxy
-        self.Z = [[0]*9 for _ in range(9)]      # Explored/Known galaxy
-        self.course = [[0]*3 for _ in range(10)]     # Course vectors
+        self.G = [[0]*9 for _ in range(9)]      # G[][]: Galaxy
+        self.Z = [[0]*9 for _ in range(9)]      # Z[][]: Explored/Known galaxy
+        self.course = [[0]*3 for _ in range(10)]     # C[][]: Course vectors
         self.K = [[0]*4 for _ in range(4)]      # Klingons in quadrant
         self.N = [0]*4
-        self.D = [0]*9                          # Device damage
+        self.D = [0]*9                          # D[]: self.damage_on[device_number]
 
         # --- Scalars (BASIC lines 370-470) ---
-        self.today = random.randint(20, 39) *100
-        self.start_date = self.today
-        self.total_avail_time = 25 + random.randint(0, 9)
-        self.D0 = 0
+        self.today = random.randint(20, 39) *100            # T: Today
+        self.start_date = self.today                        # T0: Mission Start date
+        self.total_avail_time = 25 + random.randint(0, 9)   # T9: Total available time
+        self.docked = 0             # D0: docked: 1 = True, 0 = False
+
+        # E: energy,            E0: full_energy
         self.energy = self.full_energy = 3000
+
+        # P: photon_torpedos,   P0: full_photon_torpedos
         self.photon_torpedos = self.full_photon_torpedos = 10
         self.S9 = 200
-        self.shields = 0
+        self.shields = 0        # S: shields
 
         # NOTE: The original BASIC sets Bases = 2 initially, which seems to be a
         # leftover from an older version of the game. The galaxy always starts
@@ -68,13 +73,14 @@ class Game:
         self.Klingons = 0
 
         # --- Enterprise's starting position (BASIC 490) ---
-        self.enterprise_quad_row = self.fnr(1)
-        self.enterprise_quad_column = self.fnr(1)
-        self.enterprise_sect_row = self.fnr(1)
-        self.enterprise_sect_column = self.fnr(1)
+        self.enterprise_quad_row = self.fnr(1)          # Q1: enterprise_quad_row
+        self.enterprise_quad_column = self.fnr(1)       # Q2: enterprise_quad_column
+        self.enterprise_sect_row = self.fnr(1)          # S1: enterprise_sect_row
+        self.enterprise_sect_column = self.fnr(1)       # S2: enterprise_sect_column
 
         # --- Course vectors (BASIC 530-600) ---
         # Row 9 duplicates row 1 (course "9" is same as "1")
+        # C[][]: course[][]
         for i in basic_range(1, 9):
             self.course[i][1] = self.course[i][2] = 0
         self.course[3][1] = -1
@@ -93,7 +99,7 @@ class Game:
 
         # --- Devices start undamaged (BASIC 670) ---
         for i in basic_range(1, 8):
-            self.D[i] = 0
+            self.damage_on[i] = 0                   # D[]: self.damage_on[device_number]
 
         # --- Other Object state variables, and initializations
         self.K7 = 0
@@ -437,14 +443,14 @@ class Game:
 
         if docked:
             # 6580 Docked to Base
-            self.D0 = 1
+            self.docked = 1
             self.condition = "DOCKED"
             self.energy = self.full_energy
             self.photon_torpedos = self.full_photon_torpedos
             print('SHIELDS DROPPED FOR DOCKING PURPOSES')
             self.shields = 0
         else:
-            self.D0 = 0
+            self.docked = 0
             if self.local_klingons:
                 self.condition = "*RED*"
             else:
@@ -459,7 +465,7 @@ class Game:
         Short Range Sensor Scan - Draw Sector + status panel
         """
         # 6720 - Check if SRS is Damaged
-        if self.D[2] < 0:
+        if self.damage_on[2] < 0:
             # SRS Damaged! Cannot shhow Anything...
             print()
             print('*** SHORT RANGE SENSORS ARE OUT ***')
@@ -566,7 +572,7 @@ class Game:
         """
         while True:
             # Line 1990: check for stranded ship
-            if self.shields + self.energy <= 10 or not (self.energy > 10 or self.D[7] == 0):
+            if self.shields + self.energy <= 10 or not (self.energy > 10 or self.damage_on[7] == 0):
                 self.print_fatal_error()
                 return
 
@@ -709,16 +715,16 @@ class Game:
         if W1 >= 1:
             D6 = 1
         for i in basic_range(1, 8):
-            if self.D[i] >= 0:
+            if self.damage_on[i] >= 0:
                 continue
-            self.D[i] += D6
-            if self.D[i] > -.1 and self.D[i] < 0:
-                self.D[i] = -.1
+            self.damage_on[i] += D6
+            if self.damage_on[i] > -.1 and self.damage_on[i] < 0:
+                self.damage_on[i] = -.1
                 continue
-            if self.D[i] < 0:
+            if self.damage_on[i] < 0:
                 continue
-            if self.D[i] != 1:
-                self.D[i] = 1
+            if self.damage_on[i] != 1:
+                self.damage_on[i] = 1
                 print(f'DAMAGE CONTROL REPORT: ')
             print(f'{" " * 8}')
             device = i
@@ -792,7 +798,7 @@ class Game:
         if not self.local_klingons:
             return
 
-        if self.D0:
+        if self.docked:
             print('STARBASE SHIELDS PROTECT THE ENTERPRISE')
             return
 
@@ -825,7 +831,7 @@ class Game:
     def device_affected(self, hit_power):
         """BASIC 6140 - 6170"""
         device = self.fnr(1)
-        self.D[device] = self.D[device] - hit_power / self.shields - .5 * random.random()
+        self.damage_on[device] = self.damage_on[device] - hit_power / self.shields - .5 * random.random()
         device_name = self.device_name(device)
         print(f'DAMAGE CONTROL REPORTS {device_name} DAMAGED BY THE HIT')
 
@@ -869,13 +875,13 @@ class Game:
         """BASIC 2350 - 2470"""
         warp_ok = False
         max_warp = 8
-        if self.D[1] < 0:
+        if self.damage_on[1] < 0:
             max_warp = 0.2
 
         warp = input(f'WARP FACTOR (0-{max_warp})')
         # NOTE: Check the input and convert to integer...
 
-        if self.D[1] > 0 and warp > .2:
+        if self.damage_on[1] > 0 and warp > .2:
             print('WARP ENGINES ARE DAMAGED. MAXIMUM SPEED = WARP 0.2')
             return warp_ok, warp
 
@@ -896,7 +902,7 @@ class Game:
             print(f"                      FOR MANEUVERING AT WARP {warp}!'")
 
             # Can not-damaged Shields lend me enough energy...?
-            if self.shields < needed - self.energy or self.D[7] < 0:
+            if self.shields < needed - self.energy or self.damage_on[7] < 0:
                 enough_energy = True
                 return enough_energy, needed
             print(f'DEFLECTOR CONTROL ROOM ACKNOWLEDGES {self.shields} UNITS OF ENERGY')
@@ -940,20 +946,20 @@ class Game:
 
     def cmd_dam(self):
         """BASIC 5690 - 5980"""
-        if self.D[6] >= 0:
+        if self.damage_on[6] >= 0:
             self.show_damage_status()
         else:
             # Damage control "damaged", cannot check...
             print("DAMAGE CONTROL REPORT NOT AVAILABLE")
 
             # If no damage, return
-            if not self.D0:
+            if not self.docked:
                 return
 
         # Compute the cumulative delays: D3
         self.D3 = 0
         for i in basic_range(1, 8):
-            if self.D[i] < 0:
+            if self.damage_on[i] < 0:
                 self.D3 += .1
 
         # Nothing to repair
@@ -973,8 +979,8 @@ class Game:
 
         # Do the repairs
         for i in basic_range(1, 8):
-            if self.D[i] < 0:
-                self.D[i] = 0
+            if self.damage_on[i] < 0:
+                self.damage_on[i] = 0
 
         # Update Today's date with delays
         self.today += self.D3 + .1
@@ -988,7 +994,7 @@ class Game:
         print("DEVICE             STATE OF REPAIR")
         for device in basic_range(1, 8):
             dev_name = self.device_name(device)
-            print(f'{dev_name:<25}{int(self.D[device] * 100) * .01}')
+            print(f'{dev_name:<25}{int(self.damage_on[device] * 100) * .01}')
         print()
 
 
