@@ -28,6 +28,8 @@ class Game:
         """BASIC 330 - 710
         Reset all state to start a new game.
         """
+        self.show_uss_enterprise()
+
         self.ENTERPRISE = "<*>"
         self.KLINGON = "+K+"
         self.BASE = ">!<"
@@ -42,20 +44,20 @@ class Game:
         # --- Arrays (BASIC DIM line 330) ---
         self.G = [[0]*9 for _ in range(9)]      # Galaxy
         self.Z = [[0]*9 for _ in range(9)]      # Explored/Known galaxy
-        self.C = [[0]*3 for _ in range(10)]     # Course vectors
+        self.course = [[0]*3 for _ in range(10)]     # Course vectors
         self.K = [[0]*4 for _ in range(4)]      # Klingons in quadrant
         self.N = [0]*4
         self.D = [0]*9                          # Device damage
 
         # --- Scalars (BASIC lines 370-470) ---
-        self.T = random.randint(20, 39) *100
-        self.T0 = self.T
-        self.T9 = 25 + random.randint(0, 9)
+        self.today = random.randint(20, 39) *100
+        self.start_date = self.today
+        self.total_avail_time = 25 + random.randint(0, 9)
         self.D0 = 0
-        self.E = self.E0 = 3000
-        self.P = self.P0 = 10
+        self.energy = self.full_energy = 3000
+        self.photon_torpedos = self.full_photon_torpedos = 10
         self.S9 = 200
-        self.S = 0
+        self.shields = 0
 
         # NOTE: The original BASIC sets Bases = 2 initially, which seems to be a
         # leftover from an older version of the game. The galaxy always starts
@@ -66,28 +68,28 @@ class Game:
         self.Klingons = 0
 
         # --- Enterprise's starting position (BASIC 490) ---
-        self.Q1 = self.fnr(1)
-        self.Q2 = self.fnr(1)
-        self.S1 = self.fnr(1)
-        self.S2 = self.fnr(1)
+        self.enterprise_quad_row = self.fnr(1)
+        self.enterprise_quad_column = self.fnr(1)
+        self.enterprise_sect_row = self.fnr(1)
+        self.enterprise_sect_column = self.fnr(1)
 
         # --- Course vectors (BASIC 530-600) ---
         # Row 9 duplicates row 1 (course "9" is same as "1")
         for i in basic_range(1, 9):
-            self.C[i][1] = self.C[i][2] = 0
-        self.C[3][1] = -1
-        self.C[2][1] = -1
-        self.C[4][1] = -1
-        self.C[4][2] = -1
-        self.C[5][2] = -1
-        self.C[6][2] = -1
-        self.C[1][2] = 1
-        self.C[2][2] = 1
-        self.C[6][1] = 1
-        self.C[7][1] = 1
-        self.C[8][1] = 1
-        self.C[8][2] = 1
-        self.C[9][2] = 1
+            self.course[i][1] = self.course[i][2] = 0
+        self.course[3][1] = -1
+        self.course[2][1] = -1
+        self.course[4][1] = -1
+        self.course[4][2] = -1
+        self.course[5][2] = -1
+        self.course[6][2] = -1
+        self.course[1][2] = 1
+        self.course[2][2] = 1
+        self.course[6][1] = 1
+        self.course[7][1] = 1
+        self.course[8][1] = 1
+        self.course[8][2] = 1
+        self.course[9][2] = 1
 
         # --- Devices start undamaged (BASIC 670) ---
         for i in basic_range(1, 8):
@@ -95,8 +97,8 @@ class Game:
 
         # --- Other Object state variables, and initializations
         self.K7 = 0
-        self.Q_str = [[self.EMPTY_SPACE] * 9 for _ in range(9)]    # Quadrant I am in now
-        self.D4 = 0.0
+        self.Q_str = [[self.EMPTY_SPACE] * 9 for _ in range(9)]    # Start with all space empty
+        self.ramdon_delay = 0.0               # D4: Random delay
         self.G5 = 0
         self.condition = "UNKNOWN"
         self.local_klingons = 0
@@ -104,14 +106,30 @@ class Game:
         self.local_stars = 0
 
 
-    def fnd(self, i):
+    def show_uss_enterprise(self):
+        """BASIC 220 - 227"""
+        for _ in range(11):
+            print()
+
+        print("                                    ,------*------,")
+        print("                    ,-------------   '---  ------'")
+        print("                     '-------- --'      / /")
+        print("                         ,---' '-------/ /--,")
+        print("                          '----------------'")
+        print()
+        print("                    THE USS ENTERPRISE --- NCC-1701")
+        for _ in range(5):
+            print()
+
+
+    def distance_to_klingon(self, i):
         """BASIC 470
         Distance from Klingon i to Enterprise.
         BASIC: DEFFND(D) = SQR((K(I,1)-S1)^2 + (K(I,2)-S2)^2)
         Note: BASIC used a global I; we pass it explicitly — a deliberate fix.
         """
-        return math.sqrt((self.K[i][1] - self.S1) ** 2 +
-                         (self.K[i][2] - self.S2) ** 2)
+        return math.sqrt((self.K[i][1] - self.enterprise_sect_row) ** 2 +
+                         (self.K[i][2] - self.enterprise_sect_column) ** 2)
 
 
     def fnr(self, _=1):
@@ -153,23 +171,23 @@ class Game:
         """
         # At least 1 Base should exist...
         if not self.Bases:
-            if self.G[self.Q1][self.Q2] < 200:
+            if self.G[self.enterprise_quad_row][self.enterprise_quad_column] < 200:
                 # NOTE: The original BASIC adds +120 here, which is a transcription bug:
                 # it adds 1 Klingon (hundreds) and 2 bases (tens) to this quadrant.
                 # Combined with the +10 below, the final quadrant has 3 bases but the
                 # global counter says 1. This is how the original has always behaved.
                 # I will use the "obviously intended" behaviour, so I use +100 instead.
-                # self.G[self.Q1][self.Q2] += 120
+                # self.G[self.enterprise_quad_row][self.enterprise_quad_column] += 120
                 # NOTE: We are adding 1 Klingon to that quadrant and the max number 
                 # of klingons in quadrant == 3 holds because the comparisson is `< 200`.
-                self.G[self.Q1][self.Q2] += 100
+                self.G[self.enterprise_quad_row][self.enterprise_quad_column] += 100
                 self.Klingons += 1
             self.Bases = 1
-            self.G[self.Q1][self.Q2] += 10
+            self.G[self.enterprise_quad_row][self.enterprise_quad_column] += 10
 
             # Set another random starting Quadrant for Enterprise
-            self.Q1 = self.fnr(1)
-            self.Q2 = self.fnr(1)
+            self.enterprise_quad_row = self.fnr(1)
+            self.enterprise_quad_column = self.fnr(1)
 
         self.K7 = self.Klingons
 
@@ -180,8 +198,8 @@ class Game:
         # Klingons count...
         # NOTE: Also, I have changed the comparison from `>` to `>=`
         # to always allow at least one more day than Klingons.
-        if self.Klingons >= self.T9:
-            self.T9 = self.Klingons + 1
+        if self.Klingons >= self.total_avail_time:
+            self.total_avail_time = self.Klingons + 1
 
 
     def print_orders(self):
@@ -193,7 +211,7 @@ class Game:
         print(f'YOUR ORDERS ARE AS FOLLOWS:')
         print(f'     DESTROY THE {self.Klingons} KLINGON WARSHIPS WHICH HAVE INVADED')
         print(f'  THE GALAXY BEFORE THEY CAN ATTACK FEDERATION HEADQUARTERS')
-        print(f'  ON STARDATE {self.T0 + self.T9} THIS GIVES YOU {self.T9} DAYS. THERE{self.X0_str}')
+        print(f'  ON STARDATE {self.start_date + self.total_avail_time} THIS GIVES YOU {self.total_avail_time} DAYS. THERE{self.X0_str}')
         print(f'  {self.Bases} STARBASE{self.X_str} IN THE GALAXY FOR RESUPPLYING YOUR SHIP')
         print()
 
@@ -206,29 +224,29 @@ class Game:
         # 1300 - Not used... commented until found the utility of I = random.random()
         # I = random.random()
         # Also not sure if Z4 & Z5 are needed in the Python port...
-        # Z4 = self.Q1
-        # Z5 = self.Q2
+        # Z4 = self.enterprise_quad_row
+        # Z5 = self.enterprise_quad_column
         self.local_klingons = 0
         self.local_bases = 0
         self.local_stars = 0
         self.G5 = 0
-        self.D4 = .5 * random.random()
+        self.ramdon_delay = .5 * random.random()          # Random delay recalculated on quadrant entry
         self.update_known_galaxy()
 
         # 1390
-        # if not (self.Q1 < 1 or self.Q1 > 8 or self.Q2 < 1 or self.Q2 > 8):
-        # if 1 <= self.Q1 <= 8 and 1 <= self.Q2 <= 8:
+        # if not (self.enterprise_quad_row < 1 or self.enterprise_quad_row > 8 or self.enterprise_quad_column < 1 or self.enterprise_quad_column > 8):
+        # if 1 <= self.enterprise_quad_row <= 8 and 1 <= self.enterprise_quad_column <= 8:
         # `if` not needed as Q1 and Q2 come from fnr ::> are always in range
 
-        self.local_klingons = self.G[self.Q1][self.Q2] // 100
-        self.local_bases = self.G[self.Q1][self.Q2] // 10 % 10
-        self.local_stars = self.G[self.Q1][self.Q2] % 10
+        self.local_klingons = self.G[self.enterprise_quad_row][self.enterprise_quad_column] // 100
+        self.local_bases = self.G[self.enterprise_quad_row][self.enterprise_quad_column] // 10 % 10
+        self.local_stars = self.G[self.enterprise_quad_row][self.enterprise_quad_column] % 10
 
         self.print_quadrant_entry()
         
 
     def update_known_galaxy(self):
-        self.Z[self.Q1][self.Q2] = self.G[self.Q1][self.Q2]
+        self.Z[self.enterprise_quad_row][self.enterprise_quad_column] = self.G[self.enterprise_quad_row][self.enterprise_quad_column]
 
 
     def print_quadrant_entry(self):
@@ -237,9 +255,9 @@ class Game:
         Printing Info regarding the just entered Quadrant
         """
         # 1430 - Gosub 9030 Grab region name
-        g2_quadrant_name = self.region_name(self.Q1, self.Q2)
+        g2_quadrant_name = self.region_name(self.enterprise_quad_row, self.enterprise_quad_column)
         print()
-        if self.T0 != self.T:
+        if self.start_date != self.today:
             print(f'NOW ENTERING {g2_quadrant_name} QUADRANT . . .')
         else:
             # Instructions printed at the begining of the game
@@ -251,7 +269,7 @@ class Game:
 
         if self.local_klingons:
             print(f'COMBAT AREA      CONDITION RED')
-            if self.S <= 200:
+            if self.shields <= 200:
                 print('   SHIELDS DANGEROUSLY LOW')
         for i in basic_range(1,3):
             self.K[i][1] = 0
@@ -276,8 +294,8 @@ class Game:
         # the Bases, and the Stars elsewhere.
         
         # Enterprise:
-        Z1 = self.S1
-        Z2 = self.S2
+        Z1 = self.enterprise_sect_row
+        Z2 = self.enterprise_sect_column
         # Gosub 8670
         self.insert_in_quadrant(self.ENTERPRISE, Z1, Z2)
 
@@ -337,21 +355,9 @@ class Game:
         BASIC: 8670
         INSERT IN STRING ARRAY FOR QUADRANT
         space_object: What to insert
-        row: == z1 == y coordinate
-        column: == z2 == x coordinate
+        row: == Z1 == y coordinate
+        column: == Z2 == x coordinate
         """
-        # s8 = int(z2 - .5) * 3 + int(z1 - .5) * 24 + 1
-        # if len(a_str) != 3:
-            # print('ERROR')
-            # quit()
-
-        # if s8 == 1:
-            # return a_str + self.Q_str[-189:]
-
-        # if s8 == 190:
-            # return self.Q_str[:189] + a_str
-
-        # self.Q_str[:s8 - 1] + a_str + self.Q_str[-(190 - s8):]
         self.Q_str[row][column] = space_object
 
 
@@ -418,8 +424,8 @@ class Game:
         """6430 - 6660
         Docking check"""
         docked = False
-        for i in basic_range(self.S1 - 1, self.S1 + 1):
-            for j in basic_range(self.S2 - 1, self.S2 + 1):
+        for i in basic_range(self.enterprise_sect_row - 1, self.enterprise_sect_row + 1):
+            for j in basic_range(self.enterprise_sect_column - 1, self.enterprise_sect_column + 1):
                 if not (1 <= i <= 8 and 1 <= j <= 8):
                     continue
                 # Gosub 8830
@@ -433,17 +439,17 @@ class Game:
             # 6580 Docked to Base
             self.D0 = 1
             self.condition = "DOCKED"
-            self.E = self.E0
-            self.P = self.P0
+            self.energy = self.full_energy
+            self.photon_torpedos = self.full_photon_torpedos
             print('SHIELDS DROPPED FOR DOCKING PURPOSES')
-            self.S = 0
+            self.shields = 0
         else:
             self.D0 = 0
             if self.local_klingons:
                 self.condition = "*RED*"
             else:
                 self.condition = "GREEN"
-                if self.E < self.E0 * .1:
+                if self.energy < self.full_energy * .1:
                     self.condition = "YELLOW"
 
 
@@ -476,13 +482,13 @@ class Game:
         }
 
         enterprise_info = {
-            1: f'{int(self.T * 10) * .1:g}',
+            1: f'{int(self.today * 10) * .1:g}',
             2: f'{self.condition}',
-            3: f'{self.Q1}, {self.Q2}',
-            4: f'{self.S1}, {self.S2}',
-            5: f'{int(self.P)}',
-            6: f'{int(self.E + self.S)}',
-            7: f'{int(self.S)}',
+            3: f'{self.enterprise_quad_row}, {self.enterprise_quad_column}',
+            4: f'{self.enterprise_sect_row}, {self.enterprise_sect_column}',
+            5: f'{int(self.photon_torpedos)}',
+            6: f'{int(self.energy + self.shields)}',
+            7: f'{int(self.shields)}',
             8: f'{int(self.Klingons)}',
         }
 
@@ -532,8 +538,8 @@ class Game:
 
     def __repr__(self):
         return f'Game:\n\
-\tToday: {self.T} - Start Date: {self.T0} - Total Avail. Time: {self.T9}\n\
-\tQuadrant: [{self.Q1}, {self.Q2}], Sector: [{self.S1}, {self.S2}]\n\
+\tToday: {self.today} - Start Date: {self.start_date} - Total Avail. Time: {self.total_avail_time}\n\
+\tQuadrant: [{self.enterprise_quad_row}, {self.enterprise_quad_column}], Sector: [{self.enterprise_sect_row}, {self.enterprise_sect_column}]\n\
 \tKlingons: {self.Klingons} - Bases: {self.Bases}'
 
 
@@ -560,7 +566,7 @@ class Game:
         """
         while True:
             # Line 1990: check for stranded ship
-            if self.S + self.E <= 10 or not (self.E > 10 or self.D[7] == 0):
+            if self.shields + self.energy <= 10 or not (self.energy > 10 or self.D[7] == 0):
                 self.print_fatal_error()
                 return
 
@@ -608,7 +614,7 @@ class Game:
         """
         BASIC 6220 - 6280
         """
-        print(f'IT IS STARDATE {self.T}')
+        print(f'IT IS STARDATE {self.today}')
         print(f'THERE WERE {self.Klingons} KLINGON BATTLE CRUISERS LEFT AT')
         print('THE END OF YOUR MISSION.')
         self.any_bases_left()
@@ -655,7 +661,7 @@ class Game:
         print("CONGRULATION, CAPTAIN! THEN LAST KLINGON BATTLE CRUISER")
         print("MENACING THE FDERATION HAS BEEN DESTROYED.")
         print()
-        print(f"YOUR EFFICIENCY RATING IS {1000 * (self.K7 / (self.T - self.T0)) ** 2}")
+        print(f"YOUR EFFICIENCY RATING IS {1000 * (self.K7 / (self.today - self.start_date)) ** 2}")
         self.any_bases_left()
 
 
@@ -693,28 +699,170 @@ class Game:
         if not enough_energy:
             return
 
-        self.klingons_move_fire()
+        self.klingons_move()
+        self.klingons_fire()
 
-    def klingons_move_fire(self):
+        
+        # 2700
+        D1 = 0
+        D6 = W1
+        if W1 >= 1:
+            D6 = 1
+        for i in basic_range(1, 8):
+            if self.D[i] >= 0:
+                continue
+            self.D[i] += D6
+            if self.D[i] > -.1 and self.D[i] < 0:
+                self.D[i] = -.1
+                continue
+            if self.D[i] < 0:
+                continue
+            if self.D[i] != 1:
+                self.D[i] = 1
+                print(f'DAMAGE CONTROL REPORT: ')
+            print(f'{" " * 8}')
+            device = i
+            device_name = self.device_name(device)
+            print(f'{device} REPAIR COMPLETED.')
+        if random.random() > .2:
+            # in 2880: Goto 3070 Moving starship
+            self.begin_moving_starship(course)
+            self.srs_scan_and_startup()
+        R1 = self.fnr(1)
+        if random.random() >= .6:
+            # in 2910: Gosub 3000
+            # xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+            pass
+
+
+    def begin_moving_starship(self, course):
+        """BASIC 3070 - 3450"""
+        # Leaving this sector...
+        self.insert_in_quadrant(self.EMPTY_SPACE, int(self.enterprise_sect_row, int(self.enterprise_sect_column)))
+
+        self.X1 = self.course[course][1] + (self.course[course + 1][1] - self.course[course][1]) * (course - int(course))
+        self.X = self.enterprise_sect_row
+        self.Y = self.enterprise_sect_column
+        self.X2 = self.course[course][2] + (self.course[course + 1][2] - self.course[course][2]) * (course - int(course))
+        self.Q4 = self.enterprise_quad_row
+        self.Q5 = self.enterprise_quad_column
+
+        # 3170...
+        for i in basic_range(1, self.N):
+            self.enterprise_sect_row += self.X1
+            self.enterprise_sect_column += self.X2
+            if not ( 1 <= self.enterprise_sect_row < 9 and 1 <= self.enterprise_sect_column < 9 ):
+                self.exceeded_quadrant_limits()
+                # Check if need to end the for loop...
+            # 3240 S8 comprobar si hay 2 espacios...
+            self.enterprise_sect_row - X1
+            self.enterprise_sect_column - X2
+            print(f'WARP ENGINESSHUT DOWN AT SECTOR {self.enterprise_sect_row}, {self.enterprise_sect_column} DUE TO BAD NAVIGATION')
+
+        self.insert_in_quadrant(self.ENTERPRISE, self.enterprise_sect_row, self.enterprise_sect_column)
+        self.maneuver_energy()
+        T8 = 1
+        if W1 < 1:
+            T8 = .1 * int(10 * W1)
+        self.today += T8
+        if self.today > self.start_date + self.total_avail_time:
+            self.end_of_game()
+
+        # 3480: Goto 1980 --> Gosub 6430: SRS Scan done after returning this method
+
+
+    def exceeded_quadrant_limits(self):
+        """BEGIN 3500"""
+        # Remember the quadrant are not spaces, it is a 2D struc
+
+
+    def klingons_move(self):
         """Basic 2590 - """
-        pass
+        for i in basic_range(1, self.local_klingons):
+            if not self.K[i][3]:
+                continue
+
+            self.insert_in_quadrant(self.EMPTY_SPACE, self.K[i][1], self.K[i][2])
+            row, column = self.find_empty_place_in_quadrant()
+            self.insert_in_quadrant(self.KLINGON, row, column)
+
+
+    def klingons_fire(self):
+        """Basic 6000 - 6200"""
+        if not self.local_klingons:
+            return
+
+        if self.D0:
+            print('STARBASE SHIELDS PROTECT THE ENTERPRISE')
+            return
+
+        for i in basic_range(1, 3):
+            if self.K[i][3] <= 0:
+                continue
+            # Why distance_to_klingon(1) instead of distance_to_klingon(i) ???
+
+            hit_power = int((self.K[i][3] / self.distance_to_klingon(1)) * (2 + (former_rnd:=random.random())))
+            self.shields -= hit_power
+            self.K[i][3] /= (3 + former_rnd)
+            print(f'{hit_power} UNIT HIT ON ENTERPRISE FROM SECTOR {self.K[i][1]}, {self.K[i][2]}')
+
+            if self.shields <= 0:
+                self.enterprise_destroyed()
+
+            print(f'      <SHIELDS DOWN TO {self.shields} UNITS>')
+
+            # Small hit...
+            if hit_power < 20:
+                continue
+
+            # Good luck, nothing affected...
+            if random.random() > .6 or self.shields <= .02:
+                continue
+
+            self.device_affected(hit_power)
+
+
+    def device_affected(self, hit_power):
+        """BASIC 6140 - 6170"""
+        device = self.fnr(1)
+        self.D[device] = self.D[device] - hit_power / self.shields - .5 * random.random()
+        device_name = self.device_name(device)
+        print(f'DAMAGE CONTROL REPORTS {device_name} DAMAGED BY THE HIT')
+
+
+    def device_name(self, device_number):
+        """BASIC 8790
+        device_number: The device index to search
+        RETURN a device name"""
+        DEVICES = {
+            1: "WARP ENGINES",
+            2: "SHORT RANGE SENSORS",
+            3: "LONG RANGE SENSORS",
+            4: "PHASER CONTROL",
+            5: "PHOTON TUBES",
+            6: "DAMAGE CONTROL",
+            7: "SHIELD CONTROL",
+            8: "LIBRARY-COMPUTER"
+        }
+        return DEVICES.get(device_number, "")
+
 
     def select_course(self):
         """BASIC 2300 - 2330"""
-        incorrect_course = True
+        course_ok = False
         course = input("COURSE (0-9)")
         if not (course.isnumeric()):
             self.incorrect_course()
-            return incorrect_course, course
+            return course_ok, course
 
         course = int(course)
-        course = 1 if C1 == 9 else course
+        course = 1 if course == 9 else course
         if not (1 <= course < 9):
             self.incorrect_course()
-            return incorrect_course, course
+            return course_ok, course
 
-        incorrect_course = False
-        return incorrect_course, course
+        course_ok = True
+        return course_ok, course
 
 
     def select_warp(self):
@@ -743,21 +891,35 @@ class Game:
         """Basic 2490 - 2570"""
         enough_energy = False
         needed = int(warp * 8 + .5)
-        if self.E - needed < 0:
+        if self.energy - needed < 0:
             print( "ENGINEERING REPORTS: 'INSUFFICIENT ENERGY' AVAILABLE")
             print(f"                      FOR MANEUVERING AT WARP {warp}!'")
 
             # Can not-damaged Shields lend me enough energy...?
-            if self.S < needed - self.E or self.D[7] < 0:
+            if self.shields < needed - self.energy or self.D[7] < 0:
                 enough_energy = True
                 return enough_energy, needed
-            print(f'DEFLECTOR CONTROL ROOM ACKNOWLEDGES {self.S} UNITS OF ENERGY')
+            print(f'DEFLECTOR CONTROL ROOM ACKNOWLEDGES {self.shields} UNITS OF ENERGY')
             print( '                      PRESENTLY DEPLOYED TO SHIELDS.')
             return enough_energy, needed
  
 
     def incorrect_course(self):
         print("   LT. SULU REPORTS, 'INCORRECT COURSE DATA, SIR!'")
+
+
+    def maneuver_energy(self):
+        """BASIC 3910 - 3980"""
+        self.energy -= (self.N + 10)
+        if self.energy >= 0:
+            return
+
+        print("SHIELD CONTROL SUPPLIES ENERGY TO COMPLETE THE MANEUVER.")
+        self.shields += self.E
+        self.energy = 0
+        if self.shields <= 0:
+            self.shields = 0
+        return
 
 
     def cmd_lrs(self):
@@ -777,7 +939,58 @@ class Game:
 
 
     def cmd_dam(self):
-        print('... DAM ...')
+        """BASIC 5690 - 5980"""
+        if self.D[6] >= 0:
+            self.show_damage_status()
+        else:
+            # Damage control "damaged", cannot check...
+            print("DAMAGE CONTROL REPORT NOT AVAILABLE")
+
+            # If no damage, return
+            if not self.D0:
+                return
+
+        # Compute the cumulative delays: D3
+        self.D3 = 0
+        for i in basic_range(1, 8):
+            if self.D[i] < 0:
+                self.D3 += .1
+
+        # Nothing to repair
+        if not self.D3:
+            return
+
+        print()
+        # Add random delay (D4) that chages on every quadrant entry
+        self.D3 += self.ramdon_delay
+        self.D3 = .9 if self.D3 >= 1 else self.D3
+
+        print('TECHNICIANS STANDING BY TO EFFECT REPAIRS TO YOUR SHIP')
+        print(f'ESTIMATED TIME TO REPAIR: {.01 * int(100 * self.D3)} STARDATES')
+        y_n = input('WILL YOU AUTHORIZE THE REPAIR ORDER (Y/N) ').strip().upper()
+        if y_n != "Y":
+            return
+
+        # Do the repairs
+        for i in basic_range(1, 8):
+            if self.D[i] < 0:
+                self.D[i] = 0
+
+        # Update Today's date with delays
+        self.today += self.D3 + .1
+
+        self.show_damage_status()
+
+
+    def show_damage_status(self):
+        """BASIC 5910 - """
+        print()
+        print("DEVICE             STATE OF REPAIR")
+        for device in basic_range(1, 8):
+            dev_name = self.device_name(device)
+            print(f'{dev_name:<25}{int(self.D[device] * 100) * .01}')
+        print()
+
 
 
     def cmd_com(self):
