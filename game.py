@@ -965,7 +965,27 @@ class Game:
 
 
     def cmd_she(self):
-        print('... SHE ...')
+        """BASIC 5530 - 5660"""
+        # Are shields damaged?
+        if self.damage_on[7] < 0:
+            print('SHIELDS INOPERABLE')
+            return
+
+        units = input(f'ENERGY AVAILABLE = {self.energy + self.shields}, NUMBER OF UNITS TO SHIELDS ')
+        units = int(units)
+        if units < 0 or units == self.shields:
+            print('<SHIELDS UNCHANGED>')
+            return
+        if units > self.energy + self.shields:
+            print("SHIELD CONTROL REPORTS 'THIS IS NOT THE FEDERATION TREASURY.'")
+            print('<SHIELDS UNCHANGED>')
+            return
+
+        self.energy += self.shields - units
+        self.shields = units
+        print('DEFLECTOR ROOM REPORT:')
+        print(f" 'SHIELDS NOW AT {int(self.shields)} UNITS PER YOUR COMMAND.'")
+        return
 
 
     def cmd_dam(self):
@@ -1020,7 +1040,6 @@ class Game:
             dev_name = self.device_name(device)
             print(f'{dev_name:<25}{int(self.damage_on[device] * 100) * .01}')
         print()
-
 
 
     def cmd_com(self):
