@@ -43,12 +43,12 @@ class Game:
         self.X0_str = " IS "                    # X0$
 
         # --- Arrays (BASIC DIM line 330) ---
-        self.G = [[0]*9 for _ in range(9)]      # G[][]: Galaxy
-        self.Z = [[0]*9 for _ in range(9)]      # Z[][]: Explored/Known galaxy
-        self.course = [[0]*3 for _ in range(10)]     # C[][]: Course vectors
-        self.K = [[0]*4 for _ in range(4)]      # Klingons in quadrant
+        self.G = [[0]*9 for _ in range(9)]              # G[][]: Galaxy
+        self.known_galaxy = [[0]*9 for _ in range(9)]   # Z[][]: self.know_galaxy : Explored/Known galaxy
+        self.course = [[0]*3 for _ in range(10)]        # C[][]: Course vectors
+        self.K = [[0]*4 for _ in range(4)]              # Klingons in quadrant
         self.N = [0]*4
-        self.D = [0]*9                          # D[]: self.damage_on[device_number]
+        self.damage_on = [0]*9                          # D[]: self.damage_on[device_number]
 
         # --- Scalars (BASIC lines 370-470) ---
         self.today = random.randint(20, 39) *100            # T: Today
@@ -153,7 +153,7 @@ class Game:
         # SETUP WHAT EXISTS IN GALAXY…
         for i in basic_range(1, 8):
             for j in basic_range(1, 8):
-                self.Z[i][j] = 0             # Not Known quadrant
+                self.known_galaxy[i][j] = 0             # Not Known quadrant
                 ods = random.random()
                 self.local_klingons = 0
                 if ods > .98:
@@ -252,7 +252,7 @@ class Game:
         
 
     def update_known_galaxy(self):
-        self.Z[self.enterprise_quad_row][self.enterprise_quad_column] = self.G[self.enterprise_quad_row][self.enterprise_quad_column]
+        self.known_galaxy[self.enterprise_quad_row][self.enterprise_quad_column] = self.G[self.enterprise_quad_row][self.enterprise_quad_column]
 
 
     def print_quadrant_entry(self):
@@ -929,7 +929,31 @@ class Game:
 
 
     def cmd_lrs(self):
-        print('... LRS ...')
+        """BASIC 4000 - 4230"""
+        # Is LRS damaged?
+        if self.damage_on[3] < 0:
+            print("LONG RANGE SENSORS ARE INOPERABLE")
+            return
+
+        print(f'LONG RANGE SCAN FOR QUADRANT {self.enterprise_quad_row}, {self.enterprise_quad_column}')
+        separator = f'{"-" * 19}'
+        print(separator)
+        for i in basic_range(self.enterprise_quad_row - 1, self.enterprise_quad_row + 1):
+            self.N[1] = -1
+            self.N[2] = -2
+            self.N[3] = -3
+            for j in basic_range(self.enterprise_quad_column - 1, self.enterprise_quad_column + 1):
+                if 0 < i < 9 and 0 < j < 9:
+                    self.N[j - self.enterprise_quad_column + 2] = self.G[i][j]
+                    self.known_galaxy[i][j] = self.G[i][j]
+            for l in basic_range(1, 3):
+                print(': ', end='')
+                if self.N[l] < 0:
+                    print("*** ", end='')
+                else:
+                    print(f'{self.N[l]:03} ', end='')
+            print(":")
+            print(separator)
 
 
     def cmd_pha(self):
