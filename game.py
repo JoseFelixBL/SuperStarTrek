@@ -112,8 +112,8 @@ class Game:
         self.local_stars = 0
 
         # New vars to control game ending or repeating
-        # enterprise_blown is to signal the end of this game, no more cmd_loop
-        self.enterprise_blown = False
+        # game_over is to signal the end of this game, no more cmd_loop
+        self.game_over = False
         self.play_another = True
 
 
@@ -579,7 +579,7 @@ class Game:
         """
         BASIC 1990 - 2060
         """
-        while not self.enterprise_blown and self.play_another:
+        while not self.game_over and self.play_another:
             # Line 1990: check for stranded ship
             if self.shields + self.energy <= 10 or not (self.energy > 10 or self.damage_on[7] == 0):
                 self.print_fatal_error()
@@ -616,6 +616,7 @@ class Game:
         """
         BASIC 2020 - 2050
         """
+        self.game_over = True
         print()
         print( "** FATAL ERROR **   YOU'VE JUST STRANDED YOUR SHIP IN ")
         print( "SPACE" )
@@ -670,7 +671,7 @@ class Game:
         """
         BASIC 6240 - 6250
         """
-        self.enterprise_blown = True
+        self.game_over = True
         print()
         print('THE ENTERPRISE HAS BEEN DESTROYED. THEN FEDERATION WILL BE CONQUERED')
         self.end_of_game()
@@ -680,6 +681,7 @@ class Game:
         """
         BASIC 6370 - 6400
         """
+        self.game_over = True
         print("CONGRULATION, CAPTAIN! THEN LAST KLINGON BATTLE CRUISER")
         print("MENACING THE FDERATION HAS BEEN DESTROYED.")
         print()
@@ -726,7 +728,7 @@ class Game:
 
         self.klingons_move()
         self.klingons_fire()
-        if self.enterprise_blown:
+        if self.game_over:
             return
 
         # 2700
@@ -787,8 +789,8 @@ class Game:
         s_row = self.enterprise_sect_row
         s_col = self.enterprise_sect_column
         col_dir = self.course[course][2] + (self.course[course + 1][2] - self.course[course][2]) * (course - int(course))
-        Q4 = self.enterprise_quad_row
-        Q5 = self.enterprise_quad_column
+        from_quad_row = self.enterprise_quad_row
+        from_quad_col = self.enterprise_quad_column
 
         # 3170... Check that the path is workable: full of EMPTY_SPACE to go through
         # for all the energy steps to take in that direction...
@@ -796,10 +798,12 @@ class Game:
             self.enterprise_sect_row += row_dir
             self.enterprise_sect_column += col_dir
 
-            # Am I going out of my quadrant?
+            # Am I going out of my quadrant? (out of sector bounds)
             if not ( 1 <= self.enterprise_sect_row < 9 and 1 <= self.enterprise_sect_column < 9 ):
-                self.exceeded_quadrant_limits(row_dir, col_dir, s_row, s_col, energy)
-                return
+                self.exceeded_quadrant_limits(row_dir, col_dir, s_row, s_col, energy, from_quad_row, from_quad_col)
+                if self.game_over:
+                    return
+                break
 
             # 3240 S8, check is new coords are empty
             if self.is_object_in_coordinates(self.EMPTY_SPACE, self.enterprise_sect_row, self.enterprise_sect_column):
@@ -808,7 +812,7 @@ class Game:
             # Not empty, energy not consumed, no more step checks
             self.enterprise_sect_row = int(self.enterprise_sect_row - row_dir)
             self.enterprise_sect_column = int(self.enterprise_sect_column - col_dir)
-            print(f'WARP ENGINES SHUT DOWN AT SECTOR {self.enterprise_sect_row}, {self.enterprise_sect_column} DUE TO BAD NAVAGATION')
+            print(f'WARP ENGINES SHUT DOWN AT SECTOR {self.enterprise_sect_row}, {self.enterprise_sect_column} DUE TO BAD NAVIGATION')
             break
         else:
             self.enterprise_sect_row = int(self.enterprise_sect_row)
@@ -816,6 +820,8 @@ class Game:
 
         self.insert_in_quadrant(self.ENTERPRISE, self.enterprise_sect_row, self.enterprise_sect_column)
         self.maneuver_energy(energy)
+        if from_quad_row != self.enterprise_quad_row or from_quad_col != self.enterprise_quad_column:
+            self.enter_quadrant()
 
         # Elapsed time
         T8 = 1
@@ -823,12 +829,13 @@ class Game:
             T8 = .1 * int(10 * warp)
         self.today += T8
         if self.today > self.start_date + self.total_avail_time:
+            self.game_over = True
             self.end_of_game()
 
         # 3480: Goto 1980 --> Gosub 6430: SRS Scan done after returning this method
 
 
-    def exceeded_quadrant_limits(self, row_dir, col_dir, s_row, s_col, energy):
+    def exceeded_quadrant_limits(self, row_dir, col_dir, s_row, s_col, energy, from_quad_row, from_quad_col):
         """BEGIN 3500 - 3870"""
         X = 8 * self.enterprise_quad_row + s_row + energy * row_dir
         Y = 8 * self.enterprise_quad_column + s_col + energy * col_dir
@@ -836,42 +843,60 @@ class Game:
         self.enterprise_quad_column = Y // 8
         self.enterprise_sect_row = int(X - self.enterprise_quad_row * 8)
         self.enterprise_sect_column = int(Y -self.enterprise_quad_column * 8)
-        if not self.enterprise_sect_row:
+
+        if self.enterprise_sect_row == 0:
             self.enterprise_quad_row -= 1
             self.enterprise_sect_row = 8
-        if not self.enterprise_sect_column:
+
+        if self.enterprise_sect_column == 0:
             self.enterprise_quad_column -= 1
             self.enterprise_sect_column = 8
 
+        # Am I going into the unknown? (out of 8x8 quadrants of the game)
         out_of_galaxy = False
         if self.enterprise_quad_row < 1:
             out_of_galaxy = True
             self.enterprise_quad_row = 1
             self.enterprise_sect_row = 1
+
         if self.enterprise_quad_row > 8:
             out_of_galaxy = True
             self.enterprise_quad_row = 8
             self.enterprise_sect_row = 8
+
         if self.enterprise_quad_column < 1:
             out_of_galaxy = True
             self.enterprise_quad_column = 1
             self.enterprise_sect_column = 1
+
         if self.enterprise_quad_column > 8:
             out_of_galaxy = True
             self.enterprise_quad_column = 8
             self.enterprise_sect_column = 8
+
         if out_of_galaxy:
             print("LT. UHURA REPORTS MESSAGE FROM STARFLEET COMMAND:")
             print(" 'PERMISSION TO ATTEMPT CROSSING OF GALACTIC PERIMETER")
             print("IS HEREBY *DENIED*. SHUT DOWN YOUR ENGINES.'")
             print("CHIEF ENGINEER SCOTT REPORTS 'WARP ENGINES SHUT DOWN")
             print(f"AT SECTOR {self.enterprise_sect_row}, {self.enterprise_sect_column} OF QUADRANT {self.enterprise_quad_row}, {self.enterprise_quad_column}.'")
+
             if self.today > self.start_date + self.total_avail_time:
+                self.game_over = True
                 self.end_of_game()
-        self.today += 1
-        self.maneuver_energy(energy)
-        # goto 1320
-        self.enter_quadrant()
+                return
+
+        return
+
+        # # This is 8 * Q1 + Q2 = 8 * Q4 + Q5, meaning: Are we in the same quadrant?
+        # # if so, we have not entered a new quadrant
+        # if from_quad_row == self.enterprise_quad_row and from_quad_col == self.enterprise_quad_column:
+        #     return
+        # 
+        # self.today += 1
+        # self.maneuver_energy(energy)
+        # # goto 1320
+        # self.enter_quadrant()
 
 
     def klingons_move(self):
@@ -1170,7 +1195,7 @@ class Game:
     def play(self):
         """Play the game"""
         while self.play_another:
-            if self.enterprise_blown:
+            if self.game_over:
                 self.reset()
             self.setup_galaxy()
             self.fix_up_galaxy()
