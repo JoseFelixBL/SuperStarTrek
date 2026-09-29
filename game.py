@@ -1097,7 +1097,66 @@ class Game:
 
 
     def cmd_pha(self):
-        print('... PHA ...')
+        """BASIC 4260 - 4670"""
+        # Are Phasers damaged?
+        if self.damage_on[4] < 0:
+            print('PHASERS INOPERAtIVE')
+            return
+
+        if self.local_klingons <= 0:
+            print("SCIENCE OFFICER SPOCK REPORTS 'SENSORS SHOW NO ENEMY SHIPS")
+            print("                               IN THIS QUADRANT'")
+            return
+
+        if self.damage_on[8] < 0:
+            print("COMPUTER FAILURE HAMPERS ACCURACY")
+        print("PHASERS LOCKED ON TARGET; ", end="")
+        while True:
+            print(f"ENERGY AVAILABLE = {self.energy} UNITS")
+            X = input("NUMBER OF UNIT TO FIRE ")
+            try:
+                X = float(X)
+            except:
+                return
+
+            if X <= 0:
+                return
+
+            if self.energy - X >= 0:
+                break
+
+        self.energy -= X
+        if self.damage_on[7] < 0:
+            X *= random.random()
+
+        H1 = int(X/self.local_klingons)
+        for i in basic_range(1, 3):
+            if self.K[i][3] <= 0:
+                continue
+            H = int((H1 / self.distance_to_klingon(i)) * random.random() + 2)
+            if H <= .15 * self.K[i][3]:
+                print(f'SENSORS SHOW NO DAMAGE TO ENEMY AT {self.K[i][1]}, {self.K[i][2]}')
+                continue
+
+            self.K[i][3] -= H
+            print(f'{H} UNIT HIT ON KLINGON AT SECTOR {self.K[i][1]}, {self.K[i][2]}')
+            if self.K[i][3] > 0:
+                print(f'(SENSORS SHOW {self.K[i][3]} UNITS REMAINING)')
+                continue
+
+            print('*** KLINGON DESTROYED ***')
+            self.local_klingons -=1
+            self.klingons -= 1
+            self.insert_in_quadrant(self.EMPTY_SPACE, self.K[i][1], self.K[i][2])
+
+            self.K[i][3] = 0
+            self.G[self.enterprise_quad_row][self.enterprise_quad_column] -= 100
+            self.known_galaxy[self.enterprise_quad_row][self.enterprise_quad_column] = self.G[self.enterprise_quad_row][self.enterprise_quad_column]
+            if self.klingons <= 0:
+                self.mission_acomplished()
+                return
+
+        self.klingons_fire()
 
 
     def cmd_tor(self):
