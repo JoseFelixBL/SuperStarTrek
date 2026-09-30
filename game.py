@@ -631,7 +631,7 @@ class Game:
         """
         BASIC 6220 - 6280
         """
-        print(f'IT IS STARDATE {self.today}')
+        print(f'IT IS STARDATE {self.today:.1f}')
         print(f'THERE WERE {self.klingons} KLINGON BATTLE CRUISERS LEFT AT')
         print('THE END OF YOUR MISSION.')
         print()
@@ -753,7 +753,7 @@ class Game:
              # 2810
             if D1 != 1:
                 D1 = 1
-                print(f'DAMAGE CONTROL REPORT: ')
+                print(f'DAMAGE CONTROL REPORT: ', end='')
 
             # 2840
             device = i
@@ -903,8 +903,6 @@ class Game:
             if self.no_time_left():
                 return
 
-        return
-
 
     def klingons_move(self):
         """Basic 2590 - """
@@ -1014,6 +1012,7 @@ class Game:
         try:
             warp = float(input(f'WARP FACTOR (0-{max_warp})'))
         except:
+            print("   CHIEF ENGINEER SCOTT REPORTS 'INCORRECT WARP FIGURE, SIR!'")
             return warp_ok, 0
 
         if self.damage_on[1] < 0 and warp > .2:
@@ -1132,7 +1131,7 @@ class Game:
             if self.energy - fire_units >= 0:
                 break
 
-        fire_units = int(float(fire_units))
+        # fire_units = int(float(fire_units))
         self.energy -= fire_units
         if self.damage_on[7] < 0:
             fire_units *= random.random()
@@ -1180,7 +1179,7 @@ class Game:
 
         units = input(f'ENERGY AVAILABLE = {self.energy + self.shields}, NUMBER OF UNITS TO SHIELDS ')
         try:
-            units = float(units)
+            units = int(float(units))
         except:
             print('<SHIELDS UNCHANGED>')
             return
