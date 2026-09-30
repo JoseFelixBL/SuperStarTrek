@@ -643,10 +643,9 @@ class Game:
         """
         BASIC 6290 - 6360
         """
-        if not self.bases:
+        if self.bases <= 0:
             self.play_another = False
             return
-            # quit()
 
         self.want_to_play_another()
 
@@ -845,14 +844,19 @@ class Game:
 
 
     def no_time_left(self):
-        if self.today > self.start_date + self.total_avail_time:
-            self.game_over = True
-            self.end_of_game()
-            return True
-        return False
+        return self.today > self.start_date + self.total_avail_time
+        # if self.today > self.start_date + self.total_avail_time:
+            # self.game_over = True
+            # self.end_of_game()
+            # return True
+        # return False
 
         # 3480: Goto 1980 --> Gosub 6430: SRS Scan done after returning this method
+    
 
+    def time_left(self):
+        return self.total_avail_time - ( self.today - self.start_date)
+    
 
     def exceeded_quadrant_limits(self, row_dir, col_dir, s_row, s_col, energy):
         """BEGIN 3500 - 3870"""
@@ -989,12 +993,12 @@ class Game:
             # returns a fraction of a sector, which sector shall we choose.
             course = int(input("COURSE (0-9)"))
         except:
-            self.incorrect_course()
+            self.incorrect_nav_course()
             return course_ok, 0
 
         course = 1 if course == 9 else course
         if not (1 <= course < 9):
-            self.incorrect_course()
+            self.incorrect_nav_course()
             return course_ok, 0
 
         course_ok = True
@@ -1056,7 +1060,7 @@ class Game:
         return enough_energy, needed
  
 
-    def incorrect_course(self):
+    def incorrect_nav_course(self):
         print("   LT. SULU REPORTS, 'INCORRECT COURSE DATA, SIR!'")
 
 
@@ -1167,7 +1171,125 @@ class Game:
 
 
     def cmd_tor(self):
-        print('... TOR ...')
+        """BASIC 4700 - 5490"""
+        if self.photon_torpedos <= 0:
+            print("ALL PHOTON TORPEDOS EXPENDED")
+            return
+
+        if self.damage_on[5] < 0:
+            print("PHOTON TUBES ARE NOT OPERATIONAL")
+            return
+
+        course = input("PHOTON TORPEDO COURSE (1-9) ")
+        try:
+            course = int(float(course))
+        except:
+            self.incorrect_tor_course()
+            return
+
+        if course == 9:
+            course = 1
+
+        if not 1 <= course < 9:
+            self.incorrect_tor_course()
+            return
+
+        # 4850
+
+        # X1 = row_dir
+        row_dir = self.course[course][1] + (self.course[course + 1][1] - self.course[course][1]) * (course - int(course))
+        self.energy -= 2
+        self.photon_torpedos -= 1
+        # Y1 = col_dir
+        col_dir = self.course[course][2] + (self.course[course + 1][2] - self.course[course][2]) * (course - int(course))
+        s_row = self.enterprise_sect_row
+        s_col = self.enterprise_sect_column
+
+        print("TORPEDO TRACK:")
+        while True:
+            s_row += row_dir                # X
+            s_col += col_dir                # Y
+            tor_row = int(s_row + .5)       # X3
+            tor_col = int(s_col + .5)       # Y3
+
+            # Out of quadrant: Torpedo missed...
+            if not (1 <= tor_row <= 8 and 1 <= tor_col <= 8):
+                print("TORPEDO MISSED")
+                self.klingons_fire()
+                return
+
+            # print actual trajectory
+            print(f'{" " * 15}{tor_row}, {tor_col}')
+            if self.is_object_in_coordinates(self.EMPTY_SPACE, s_row, s_col):
+                continue
+
+            if self.is_object_in_coordinates(self.KLINGON, s_row, s_col):
+                self.klingon_destroyed(tor_row, tor_col)
+                if self.game_over:
+                    return
+                self.klingons_fire()
+                return
+                
+            if self.is_object_in_coordinates(self.STAR, s_row, s_col):
+                print(f"STAR AT {tor_row}, {tor_col} ABSORBED TORPEDO ENERGY.")
+                self.klingons_fire()
+                return
+
+            if self.is_object_in_coordinates(self.BASE, s_row, s_col):
+                self.base_destroyed(s_row, s_col)
+                if self.game_over:
+                    return
+                self.klingons_fire()
+                return
+
+    def base_destroyed(self, row, col):
+        """BASIC 5330 - """
+        print("*** STARBASE DESTROYED ***")
+        self.local_bases -= 1
+        self.bases -= 1
+        # Checking for the possible end of the game, I think there is an error:
+        # in BASIC it reads IF Bases > 0 OR Klingons > T... (if there are bases or ther is not enogh time left; how come having bases is a game ending?)
+        # Shouldn't it be IF Bases > 0 or Klingons <= T... 
+        #
+        # Original BASIC:
+        # if self.bases > 0 or self.klingons > self.today - self.start_date - self.total_avail_time: 
+        #
+        # The following is my modified version: if no bases OR no time: game_over.
+        if self.bases <= 0 or self.klingons > self.time_left():
+            print("THAT DOES IT, CAPTAIN!! YOU ARE HEREBY RELIEVED OF COMMAND")
+            print("AND SENTENCED TO 99 STARDATES AT HARD LABOR ON CYGNUS 12!!")
+            # Here I include an extra print (It is stardate T)
+            self.game_over = True
+            self.end_of_game()
+            return
+        print("STARFLEET COMMAND REVIEWING YOUR RECORD TO CONSIDER")
+        print("COURT MARTIAL!")
+        self.insert_in_quadrant(self.EMPTY_SPACE, row, col)
+        self.G[self.enterprise_quad_row][self.enterprise_quad_column] = self.local_klingons * 100 + self.local_bases * 10 + self.local_stars
+        self.known_galaxy[self.enterprise_quad_row][self.enterprise_quad_column] = self.G[self.enterprise_quad_row][self.enterprise_quad_column]
+
+
+
+
+    def klingon_destroyed(self, row, col):
+        """BASIC 5110 - 5470"""
+        print("*** KLINGON DESTROYED ***")
+        self.local_klingons-= 1
+        self.klingons -= 1
+        if self.klingons <= 0:
+            self.mission_accomplished()
+            return
+
+        for i in basic_range(1, 3):
+            if row == self.K[i][1] and col == self.K[i][2]:
+                self.K[i][3] = 0
+                self.insert_in_quadrant(self.EMPTY_SPACE, row, col)
+                self.G[self.enterprise_quad_row][self.enterprise_quad_column] = self.local_klingons * 100 + self.local_bases * 10 + self.local_stars
+                self.known_galaxy[self.enterprise_quad_row][self.enterprise_quad_column] = self.G[self.enterprise_quad_row][self.enterprise_quad_column]
+
+
+    def incorrect_tor_course(self):
+        print("ENSIGN CHEKOV REPORTS, 'INCORRECT COURSE DATA, SIR!'")
 
 
     def cmd_she(self):
@@ -1255,6 +1377,7 @@ class Game:
 
 
     def cmd_com(self):
+        """BASIC 7290 -"""
         print('... COM ...')
 
 
