@@ -677,7 +677,7 @@ class Game:
         self.end_of_game()
 
 
-    def mission_acomplished(self):
+    def mission_accomplished(self):
         """
         BASIC 6370 - 6400
         """
@@ -794,15 +794,26 @@ class Game:
 
         # 3170... Check that the path is workable: full of EMPTY_SPACE to go through
         # for all the energy steps to take in that direction...
+        crossed = False
         for i in basic_range(1, energy):
             self.enterprise_sect_row += row_dir
             self.enterprise_sect_column += col_dir
 
-            # Am I going out of my quadrant? (out of sector bounds)
             if not ( 1 <= self.enterprise_sect_row < 9 and 1 <= self.enterprise_sect_column < 9 ):
-                self.exceeded_quadrant_limits(row_dir, col_dir, s_row, s_col, energy, from_quad_row, from_quad_col)
+                # going out of my quadrant (out of sector bounds)
+                self.exceeded_quadrant_limits(row_dir, col_dir, s_row, s_col, energy)
+
                 if self.game_over:
                     return
+
+                if from_quad_row != self.enterprise_quad_row or from_quad_col != self.enterprise_quad_column:
+                    # enter_quadrant only if in a new quadrant
+                    crossed = True
+                    self.today += 1
+                    self.enter_quadrant()
+                if self.no_time_left():
+                    return
+
                 break
 
             # 3240 S8, check is new coords are empty
@@ -818,24 +829,32 @@ class Game:
             self.enterprise_sect_row = int(self.enterprise_sect_row)
             self.enterprise_sect_column = int(self.enterprise_sect_column)
 
-        self.insert_in_quadrant(self.ENTERPRISE, self.enterprise_sect_row, self.enterprise_sect_column)
-        self.maneuver_energy(energy)
-        if from_quad_row != self.enterprise_quad_row or from_quad_col != self.enterprise_quad_column:
-            self.enter_quadrant()
+        if not crossed:
+            self.insert_in_quadrant(self.ENTERPRISE, self.enterprise_sect_row, self.enterprise_sect_column)
 
-        # Elapsed time
-        T8 = 1
-        if warp < 1:
-            T8 = .1 * int(10 * warp)
-        self.today += T8
+        self.maneuver_energy(energy)
+
+        if not crossed:
+            T8 = 1
+            if warp < 1:
+                T8 = .1 * int(10 * warp)
+            self.today += T8
+
+        if self.no_time_left():
+            return
+
+
+    def no_time_left(self):
         if self.today > self.start_date + self.total_avail_time:
             self.game_over = True
             self.end_of_game()
+            return True
+        return False
 
         # 3480: Goto 1980 --> Gosub 6430: SRS Scan done after returning this method
 
 
-    def exceeded_quadrant_limits(self, row_dir, col_dir, s_row, s_col, energy, from_quad_row, from_quad_col):
+    def exceeded_quadrant_limits(self, row_dir, col_dir, s_row, s_col, energy):
         """BEGIN 3500 - 3870"""
         X = 8 * self.enterprise_quad_row + s_row + energy * row_dir
         Y = 8 * self.enterprise_quad_column + s_col + energy * col_dir
@@ -881,22 +900,10 @@ class Game:
             print("CHIEF ENGINEER SCOTT REPORTS 'WARP ENGINES SHUT DOWN")
             print(f"AT SECTOR {self.enterprise_sect_row}, {self.enterprise_sect_column} OF QUADRANT {self.enterprise_quad_row}, {self.enterprise_quad_column}.'")
 
-            if self.today > self.start_date + self.total_avail_time:
-                self.game_over = True
-                self.end_of_game()
+            if self.no_time_left():
                 return
 
         return
-
-        # # This is 8 * Q1 + Q2 = 8 * Q4 + Q5, meaning: Are we in the same quadrant?
-        # # if so, we have not entered a new quadrant
-        # if from_quad_row == self.enterprise_quad_row and from_quad_col == self.enterprise_quad_column:
-        #     return
-        # 
-        # self.today += 1
-        # self.maneuver_energy(energy)
-        # # goto 1320
-        # self.enter_quadrant()
 
 
     def klingons_move(self):
@@ -1100,7 +1107,7 @@ class Game:
         """BASIC 4260 - 4670"""
         # Are Phasers damaged?
         if self.damage_on[4] < 0:
-            print('PHASERS INOPERAtIVE')
+            print('PHASERS INOPERATIVE')
             return
 
         if self.local_klingons <= 0:
@@ -1113,27 +1120,28 @@ class Game:
         print("PHASERS LOCKED ON TARGET; ", end="")
         while True:
             print(f"ENERGY AVAILABLE = {self.energy} UNITS")
-            X = input("NUMBER OF UNIT TO FIRE ")
+            fire_units = input("NUMBER OF UNITS TO FIRE ")
             try:
-                X = float(X)
+                fire_units = int(float(fire_units))
             except:
                 return
 
-            if X <= 0:
+            if fire_units <= 0:
                 return
 
-            if self.energy - X >= 0:
+            if self.energy - fire_units >= 0:
                 break
 
-        self.energy -= X
+        fire_units = int(float(fire_units))
+        self.energy -= fire_units
         if self.damage_on[7] < 0:
-            X *= random.random()
+            fire_units *= random.random()
 
-        H1 = int(X/self.local_klingons)
+        H1 = int(fire_units/self.local_klingons)
         for i in basic_range(1, 3):
             if self.K[i][3] <= 0:
                 continue
-            H = int((H1 / self.distance_to_klingon(i)) * random.random() + 2)
+            H = int((H1 / self.distance_to_klingon(i)) * (random.random() + 2))
             if H <= .15 * self.K[i][3]:
                 print(f'SENSORS SHOW NO DAMAGE TO ENEMY AT {self.K[i][1]}, {self.K[i][2]}')
                 continue
@@ -1141,7 +1149,7 @@ class Game:
             self.K[i][3] -= H
             print(f'{H} UNIT HIT ON KLINGON AT SECTOR {self.K[i][1]}, {self.K[i][2]}')
             if self.K[i][3] > 0:
-                print(f'(SENSORS SHOW {self.K[i][3]} UNITS REMAINING)')
+                print(f'(SENSORS SHOW {self.K[i][3]:.1f} UNITS REMAINING)')
                 continue
 
             print('*** KLINGON DESTROYED ***')
@@ -1153,7 +1161,7 @@ class Game:
             self.G[self.enterprise_quad_row][self.enterprise_quad_column] -= 100
             self.known_galaxy[self.enterprise_quad_row][self.enterprise_quad_column] = self.G[self.enterprise_quad_row][self.enterprise_quad_column]
             if self.klingons <= 0:
-                self.mission_acomplished()
+                self.mission_accomplished()
                 return
 
         self.klingons_fire()
