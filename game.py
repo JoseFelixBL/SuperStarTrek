@@ -1242,6 +1242,7 @@ class Game:
                 self.klingons_fire()
                 return
 
+
     def base_destroyed(self, row, col):
         """BASIC 5330 - """
         print("*** STARBASE DESTROYED ***")
@@ -1378,11 +1379,52 @@ class Game:
 
     def cmd_com(self):
         """BASIC 7290 -"""
-        print('... COM ...')
-        self.status_report()
+        if self.damage_on[8] < 0:
+            print("COMPUTER DISABLED")
+            return
+
+        while True:
+            command = input("COMPUTER ACTIVE AND AWAITING COMMAND: ")
+            try:
+                command = int(command)
+            except:
+                self.print_computer_options()
+                continue
+
+            bool_val = True
+            if command == 0:
+                return
+            if command == 1:
+                self.com_status_report()
+                return
+            if command == 2:
+                return
+            if command == 3:
+                return
+            if command == 4:
+                return
+            if command == 5:
+                self.com_galaxy_region_map()
+                return
+            if command < 0:
+                return
+            self.print_computer_options()
 
 
-    def status_report(self):
+    def print_computer_options(self):
+        """BASIC 7350"""
+
+        print("FUNCTIONS AVAILABLE FROM LIBRARY-COMPUTER:")
+        print("   0 = CUMULATIVE GALACTIC RECORD")
+        print("   1 = STATUS REPORT")
+        print("   2 = PHOTON TORPEDO DATA")
+        print("   3 = STARBASE NAV DATA")
+        print("   4 = DIRECTION/DISTANCE CALCULATOR")
+        print("   5 = GALAXY 'REGION NAME' MAP")
+        print()
+
+
+    def com_status_report(self):
         """BASIC 7890 - 8020"""
         print("   STATUS REPORT")
         self.X_str = "" if self.klingons == 1 else "S"
@@ -1395,6 +1437,35 @@ class Game:
             print("YOUR STUPIDITY HAS LEFT YOU ON YOUR ON IN")
             print(" THE GALAXY -- YOU HAVE NO STARBASES LEFT!")
         self.cmd_dam()
+
+
+    def com_galaxy_region_map(self):
+        """BASIC 7400"""
+        print("                        THE GALAXY")
+        self.print_galaxy_headers()
+        self.print_galaxy_sep()
+        self.print_galaxy_region_names()
+        self.print_galaxy_sep()
+
+
+    def print_galaxy_headers(self):
+        """BASIC 7550 - 7570"""
+        print("       1     2     3     4     5     6     7     8")
+
+
+    def print_galaxy_sep(self):
+        """BASIC 7560"""
+        galaxy_sep = "     ----- ----- ----- ----- ----- ----- ----- -----"
+        print(galaxy_sep)
+
+
+    def print_galaxy_region_names(self):
+        """BASIC """
+        for i in basic_range(1, 8):
+            print(f"{i}   ", end="")
+            north_region = self.region_name(i, 1, region_only=True)
+            south_region = self.region_name(i, 5, region_only=True)
+            print(f' {north_region:^24}{south_region:^24}')
 
 
     def play(self):
