@@ -1393,6 +1393,7 @@ class Game:
 
             bool_val = True
             if command == 0:
+                self.com_cumulative_gal_record()
                 return
             if command == 1:
                 self.com_status_report()
@@ -1457,6 +1458,34 @@ class Game:
         """BASIC 7560"""
         galaxy_sep = "     ----- ----- ----- ----- ----- ----- ----- -----"
         print(galaxy_sep)
+
+
+    def com_cumulative_gal_record(self):
+        """BASIC 7530 -"""
+        self.print_cumulative_headers()
+        self.print_galaxy_headers()
+        self.print_galaxy_sep()
+        self.print_known_galaxy()
+
+
+    def print_known_galaxy(self):
+        """BASIC 7570 - 7850"""
+        for i in basic_range(1, 8):
+            print(f"{i}   ", end="")
+            for j in basic_range(1, 8):
+                known_data = str(f'{self.known_galaxy[i][j]:03d}') if self.known_galaxy[i][j] != 0 else "***"
+                print(f' {known_data:^5}', end='')
+            print()
+            self.print_galaxy_sep()
+        print()
+
+
+    def print_cumulative_headers(self):
+        """BASIC 7543 - 7546"""
+        print()
+        print("        ", end="")
+        print(f"COMPUTER RECORD OF GALAXY FOR QUADRANT {self.enterprise_quad_row}, {self.enterprise_quad_column}")
+        print()
 
 
     def print_galaxy_region_names(self):
