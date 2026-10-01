@@ -1251,10 +1251,12 @@ class Game:
         # in BASIC it reads IF Bases > 0 OR Klingons > T... (if there are bases or ther is not enogh time left; how come having bases is a game ending?)
         # Shouldn't it be IF Bases > 0 or Klingons <= T... 
         #
-        # Original BASIC:
+        # Original BASIC line 5360:
         # if self.bases > 0 or self.klingons > self.today - self.start_date - self.total_avail_time: 
         #
         # The following is my modified version: if no bases OR no time: game_over.
+        # Re-reading the ORDERS the mission is to destroy all the Klingons before certain date - nothing about having bases left...
+        # ...
         if self.bases <= 0 or self.klingons > self.time_left():
             print("THAT DOES IT, CAPTAIN!! YOU ARE HEREBY RELIEVED OF COMMAND")
             print("AND SENTENCED TO 99 STARDATES AT HARD LABOR ON CYGNUS 12!!")
@@ -1267,8 +1269,6 @@ class Game:
         self.insert_in_quadrant(self.EMPTY_SPACE, row, col)
         self.G[self.enterprise_quad_row][self.enterprise_quad_column] = self.local_klingons * 100 + self.local_bases * 10 + self.local_stars
         self.known_galaxy[self.enterprise_quad_row][self.enterprise_quad_column] = self.G[self.enterprise_quad_row][self.enterprise_quad_column]
-
-
 
 
     def klingon_destroyed(self, row, col):
@@ -1379,6 +1379,22 @@ class Game:
     def cmd_com(self):
         """BASIC 7290 -"""
         print('... COM ...')
+        self.status_report()
+
+
+    def status_report(self):
+        """BASIC 7890 - 8020"""
+        print("   STATUS REPORT")
+        self.X_str = "" if self.klingons == 1 else "S"
+        print(f"KLINGON{self.X_str} LEFT: {self.klingons}")
+        print(f"MISSION MUST BE COMPLETED IN {.1 * int((self.start_date + self.total_avail_time - self.today) * 10)} STARDATES")
+        self.X_str = "" if self.bases < 2 else "S"
+        if self.bases >= 1:
+            print(f"THE FEDERATION IS MAINTSINING {self.bases} STARBASE{self.X_str} IN THE GALAXY")
+        else:
+            print("YOUR STUPIDITY HAS LEFT YOU ON YOUR ON IN")
+            print(" THE GALAXY -- YOU HAVE NO STARBASES LEFT!")
+        self.cmd_dam()
 
 
     def play(self):
