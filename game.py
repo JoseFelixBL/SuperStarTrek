@@ -789,10 +789,10 @@ class Game:
         # Leaving this sector...
         self.insert_in_quadrant(self.EMPTY_SPACE, int(self.enterprise_sect_row), int(self.enterprise_sect_column))
 
-        row_dir = self.course[course][1] + (self.course[course + 1][1] - self.course[course][1]) * (course - int(course))
+        row_dir = self.course[int(course)][1] + (self.course[int(course) + 1][1] - self.course[int(course)][1]) * (course - int(course))
         s_row = self.enterprise_sect_row
         s_col = self.enterprise_sect_column
-        col_dir = self.course[course][2] + (self.course[course + 1][2] - self.course[course][2]) * (course - int(course))
+        col_dir = self.course[int(course)][2] + (self.course[int(course) + 1][2] - self.course[int(course)][2]) * (course - int(course))
         from_quad_row = self.enterprise_quad_row
         from_quad_col = self.enterprise_quad_column
 
@@ -800,8 +800,12 @@ class Game:
         # for all the energy steps to take in that direction...
         crossed = False
         for i in basic_range(1, energy):
-            self.enterprise_sect_row += row_dir
-            self.enterprise_sect_column += col_dir
+            s_row += row_dir                # S1
+            s_col += col_dir                # S2
+            # self.enterprise_sect_row += row_dir
+            # self.enterprise_sect_column += col_dir
+            self.enterprise_sect_row = int(s_row + .5)
+            self.enterprise_sect_column = int(s_col + .5)
 
             if not ( 1 <= self.enterprise_sect_row < 9 and 1 <= self.enterprise_sect_column < 9 ):
                 # going out of my quadrant (out of sector bounds)
@@ -993,7 +997,10 @@ class Game:
             # We will need to define how does the float-course increments coordinates moves
             # instead of being -1, 0 or 1, and what to do when the final calculation 
             # returns a fraction of a sector, which sector shall we choose.
-            course = int(input("COURSE (0-9)"))
+            # 
+            # course = int(input("COURSE (0-9)"))
+            #
+            course = float(input("COURSE (0-9)"))
         except:
             self.incorrect_nav_course()
             return course_ok, 0
