@@ -789,10 +789,11 @@ class Game:
         # Leaving this sector...
         self.insert_in_quadrant(self.EMPTY_SPACE, int(self.enterprise_sect_row), int(self.enterprise_sect_column))
 
-        row_dir = self.course[int(course)][1] + (self.course[int(course) + 1][1] - self.course[int(course)][1]) * (course - int(course))
+        row_dir, col_dir = self.delta_coordinates(course)
+        # row_dir = self.course[int(course)][1] + (self.course[int(course) + 1][1] - self.course[int(course)][1]) * (course - int(course))
+        # col_dir = self.course[int(course)][2] + (self.course[int(course) + 1][2] - self.course[int(course)][2]) * (course - int(course))
         s_row = self.enterprise_sect_row
         s_col = self.enterprise_sect_column
-        col_dir = self.course[int(course)][2] + (self.course[int(course) + 1][2] - self.course[int(course)][2]) * (course - int(course))
         from_quad_row = self.enterprise_quad_row
         from_quad_col = self.enterprise_quad_column
 
@@ -1209,11 +1210,12 @@ class Game:
         # 4850
 
         # X1 = row_dir
-        row_dir = self.course[int(course)][1] + (self.course[int(course) + 1][1] - self.course[int(course)][1]) * (course - int(course))
+        # row_dir = self.course[int(course)][1] + (self.course[int(course) + 1][1] - self.course[int(course)][1]) * (course - int(course))
+        # Y1 = col_dir
+        # col_dir = self.course[int(course)][2] + (self.course[int(course) + 1][2] - self.course[int(course)][2]) * (course - int(course))
+        row_dir, col_dir = self.delta_coordinates(course)
         self.energy -= 2
         self.photon_torpedos -= 1
-        # Y1 = col_dir
-        col_dir = self.course[int(course)][2] + (self.course[int(course) + 1][2] - self.course[int(course)][2]) * (course - int(course))
         s_row = self.enterprise_sect_row
         s_col = self.enterprise_sect_column
 
@@ -1253,6 +1255,14 @@ class Game:
                     return
                 self.klingons_fire()
                 return
+
+
+    def delta_coordinates(self, course):
+        """ Calculate the delta move (delta_row, delta_col) for float courses 
+        RETURN: delta_row, delta_col"""
+        delta_row = self.course[int(course)][1] + (self.course[int(course) + 1][1] - self.course[int(course)][1]) * (course - int(course))
+        delta_col = self.course[int(course)][2] + (self.course[int(course) + 1][2] - self.course[int(course)][2]) * (course - int(course))
+        return delta_row, delta_col
 
 
     def base_destroyed(self, row, col):
