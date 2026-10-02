@@ -749,7 +749,7 @@ class Game:
             if self.damage_on[i] < 0:
                 continue
 
-             # 2810
+             # 2810 - Print report header only once
             if D1 != 1:
                 D1 = 1
                 print(f'DAMAGE CONTROL REPORT: ', end='')
@@ -760,18 +760,23 @@ class Game:
             print(f'{" " * 8}{device_name} REPAIR COMPLETED.')
 
         if random.random() > .2:
+            # 80% of times we move with no change on devices
             # in 2880: Goto 3070 Moving starship
             self.begin_moving_starship(course, warp, energy)
             return
         
         # 2910
+        # The other 20% of times there might be changes on devices
         R1 = self.fnr(1)
         device_name = self.device_name(R1)
         if random.random() >= .6:
+            # 40% of times: improvements
             # in 2910: Goto 3000
+            # It could be done even in the not damaged devices
             self.damage_on[R1] += random.random() * 3 + 1
             print(f'DAMAGE CONTROL REPORT: {device_name} STATE OF REPAIR IMPROVED\n')
         else:
+            # 60% of times: damage
             # 2930
             self.damage_on[R1] -= (random.random() * 5 + 1)
             print(f'DAMAGE CONTROL REPORT: {device_name} DAMAGED\n')
@@ -840,19 +845,16 @@ class Game:
             self.today += T8
 
         if self.no_time_left():
+            self.end_of_game()
             return
 
 
     def no_time_left(self):
-        return self.today > self.start_date + self.total_avail_time
-        # if self.today > self.start_date + self.total_avail_time:
-            # self.game_over = True
-            # self.end_of_game()
-            # return True
-        # return False
+        if self.today > self.start_date + self.total_avail_time:
+            self.game_over = True
+            return True
+        return False
 
-        # 3480: Goto 1980 --> Gosub 6430: SRS Scan done after returning this method
-    
 
     def time_left(self):
         return self.total_avail_time - ( self.today - self.start_date)
@@ -1008,7 +1010,7 @@ class Game:
     def select_warp(self):
         """BASIC 2350 - 2470"""
         warp_ok = False
-        max_warp = 8
+        max_warp = 8 if self.damage_on[1] >= 0 else 0.2
         if self.damage_on[1] < 0:
             max_warp = 0.2
 
@@ -1030,7 +1032,7 @@ class Game:
             return warp_ok, warp
         
         # 2390
-        if not warp:
+        if warp == 0:
             return warp_ok, 0
 
         #2420
@@ -1182,7 +1184,10 @@ class Game:
 
         course = input("PHOTON TORPEDO COURSE (1-9) ")
         try:
-            course = int(float(course))
+            # 
+            # course = int(float(course))
+            #
+            course = float(course)
         except:
             self.incorrect_tor_course()
             return
@@ -1197,11 +1202,11 @@ class Game:
         # 4850
 
         # X1 = row_dir
-        row_dir = self.course[course][1] + (self.course[course + 1][1] - self.course[course][1]) * (course - int(course))
+        row_dir = self.course[int(course)][1] + (self.course[int(course) + 1][1] - self.course[int(course)][1]) * (course - int(course))
         self.energy -= 2
         self.photon_torpedos -= 1
         # Y1 = col_dir
-        col_dir = self.course[course][2] + (self.course[course + 1][2] - self.course[course][2]) * (course - int(course))
+        col_dir = self.course[int(course)][2] + (self.course[int(course) + 1][2] - self.course[int(course)][2]) * (course - int(course))
         s_row = self.enterprise_sect_row
         s_col = self.enterprise_sect_column
 
@@ -1220,23 +1225,23 @@ class Game:
 
             # print actual trajectory
             print(f'{" " * 15}{tor_row}, {tor_col}')
-            if self.is_object_in_coordinates(self.EMPTY_SPACE, s_row, s_col):
+            if self.is_object_in_coordinates(self.EMPTY_SPACE, tor_row, tor_col):
                 continue
 
-            if self.is_object_in_coordinates(self.KLINGON, s_row, s_col):
+            if self.is_object_in_coordinates(self.KLINGON, tor_row, tor_col):
                 self.klingon_destroyed(tor_row, tor_col)
                 if self.game_over:
                     return
                 self.klingons_fire()
                 return
                 
-            if self.is_object_in_coordinates(self.STAR, s_row, s_col):
+            if self.is_object_in_coordinates(self.STAR, tor_row, tor_col):
                 print(f"STAR AT {tor_row}, {tor_col} ABSORBED TORPEDO ENERGY.")
                 self.klingons_fire()
                 return
 
-            if self.is_object_in_coordinates(self.BASE, s_row, s_col):
-                self.base_destroyed(s_row, s_col)
+            if self.is_object_in_coordinates(self.BASE, tor_row, tor_col):
+                self.base_destroyed(tor_row, tor_col)
                 if self.game_over:
                     return
                 self.klingons_fire()
@@ -1342,12 +1347,14 @@ class Game:
                 self.D3 += .1
 
         # Nothing to repair
-        if not self.D3:
+        if self.D3 == 0:
             return
 
         print()
         # Add random delay (D4) that chages on every quadrant entry
         self.D3 += self.random_delay
+        
+        # Delay is less than one day
         self.D3 = .9 if self.D3 >= 1 else self.D3
 
         print('TECHNICIANS STANDING BY TO EFFECT REPAIRS TO YOUR SHIP')
@@ -1399,10 +1406,13 @@ class Game:
                 self.com_status_report()
                 return
             if command == 2:
+                self.com_tor_data()
                 return
             if command == 3:
+                self.com_starbase_nav_data()
                 return
             if command == 4:
+                self.com_d_d_calculator()
                 return
             if command == 5:
                 self.com_galaxy_region_map()
@@ -1438,6 +1448,48 @@ class Game:
             print("YOUR STUPIDITY HAS LEFT YOU ON YOUR ON IN")
             print(" THE GALAXY -- YOU HAVE NO STARBASES LEFT!")
         self.cmd_dam()
+
+
+    def com_tor_data(self):
+        print("PHOTON TORPEDO DATA - *** NOT YET IMPLEMENTED ***")
+        
+
+    def com_starbase_nav_data(self):
+        print("STARBASE NAV DATA - *** NOT YET IMPLEMENTED ***")
+        
+
+    def com_d_d_calculator(self):
+        """BASIC 8150 - 8480"""
+        print("DIRECTION/DISTANCE CALCULATOR - *** NOT YET COMPLETELY IMPLEMENTED ***")
+        print("DIRECTION/DISTANCE CALCULATOR:")
+        print(f"YOU ARE AT QUADRANT {self.enterprise_quad_row}, {self.enterprise_quad_column} SECTOR {self.enterprise_sect_row}, {self.enterprise_sect_column}")
+        print("PLEASE ENTER")
+        coord_ok, from_x = self.ask_coordinate("  INITIAL COORDINATE (X) ")
+        if not coord_ok:
+            return
+        coord_ok, from_y = self.ask_coordinate("  INITIAL COORDINATE (Y) ")
+        if not coord_ok:
+            return
+        coord_ok, to_x = self.ask_coordinate("  FINAL COORDINATE (X) ")
+        if not coord_ok:
+            return
+        coord_ok, to_y = self.ask_coordinate("  FINAL COORDINATE (Y) ")
+        if not coord_ok:
+            return
+
+
+    def ask_coordinate(self, msg):
+        coord = input(msg)
+        try:
+            from_x = int(from_x)
+        except:
+            print("*** BAD COORDINATE ***")
+            return False, coord
+        if not (1 <= from_x <= 8):
+            print("*** BAD COORDINATE ***")
+            return False, coord
+        return True, coord
+
 
 
     def com_galaxy_region_map(self):
