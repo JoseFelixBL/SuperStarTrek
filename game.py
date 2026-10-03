@@ -250,8 +250,8 @@ class Game:
         # if 1 <= self.enterprise_quad_row <= 8 and 1 <= self.enterprise_quad_column <= 8:
         # `if` not needed as Q1 and Q2 come from fnr ::> are always in range
 
-        self.local_klingons = self.G[self.enterprise_quad_row][self.enterprise_quad_column] // 100
-        self.local_bases = self.G[self.enterprise_quad_row][self.enterprise_quad_column] // 10 % 10
+        self.local_klingons = int(self.G[self.enterprise_quad_row][self.enterprise_quad_column] * .01)
+        self.local_bases = int(self.G[self.enterprise_quad_row][self.enterprise_quad_column] * .01) -10 * self.local_klingons
         self.local_stars = self.G[self.enterprise_quad_row][self.enterprise_quad_column] % 10
 
         self.print_quadrant_entry()
@@ -608,6 +608,8 @@ class Game:
             elif a_str == "XXX":
                 self.play_another = False
                 return
+            elif self.debug_view and a_str == "DBG":
+                self.debug_dd()
             else:
                 self.print_commands()
 
@@ -789,13 +791,18 @@ class Game:
         # Leaving this sector...
         self.insert_in_quadrant(self.EMPTY_SPACE, int(self.enterprise_sect_row), int(self.enterprise_sect_column))
 
-        row_dir, col_dir = self.delta_coordinates(course)
         # row_dir = self.course[int(course)][1] + (self.course[int(course) + 1][1] - self.course[int(course)][1]) * (course - int(course))
         # col_dir = self.course[int(course)][2] + (self.course[int(course) + 1][2] - self.course[int(course)][2]) * (course - int(course))
+        # delta_coordinates is the same function used in torpedo navigation.
+        row_dir, col_dir = self.delta_coordinates(course)
+
         s_row = self.enterprise_sect_row
         s_col = self.enterprise_sect_column
+
         from_quad_row = self.enterprise_quad_row
         from_quad_col = self.enterprise_quad_column
+        if self.debug_view:
+            print(f'\t>>>>> begin_moving_starship: Entering begin: ({self.enterprise_quad_row},{self.enterprise_quad_column})')
 
         # 3170... Check that the path is workable: full of EMPTY_SPACE to go through
         # for all the energy steps to take in that direction...
@@ -803,14 +810,22 @@ class Game:
         for i in basic_range(1, energy):
             s_row += row_dir                # S1
             s_col += col_dir                # S2
+
             # self.enterprise_sect_row += row_dir
             # self.enterprise_sect_column += col_dir
+            # int(s_row + .5) is adjusting for float type navigation, as in torpedos' nav.
             self.enterprise_sect_row = int(s_row + .5)
             self.enterprise_sect_column = int(s_col + .5)
+            if self.debug_view:
+                print(f'\t>>>>> begin_moving_starship: In the loop: ({self.enterprise_sect_row},{self.enterprise_sect_column})')
 
             if not ( 1 <= self.enterprise_sect_row < 9 and 1 <= self.enterprise_sect_column < 9 ):
                 # going out of my quadrant (out of sector bounds)
+                if self.debug_view:
+                    print(f'\t>>>>> begin_moving_starship: ====== BEFORE exceeded_q_limits: ({self.enterprise_quad_row},{self.enterprise_quad_column})')
                 self.exceeded_quadrant_limits(row_dir, col_dir, s_row, s_col, energy)
+                if self.debug_view:
+                    print(f'\t>>>>> begin_moving_starship: ====== AFTER  exceeded_q_limits: ({self.enterprise_quad_row},{self.enterprise_quad_column})')
 
                 if self.game_over:
                     return
@@ -865,12 +880,17 @@ class Game:
         return self.total_avail_time - ( self.today - self.start_date)
     
 
-    def exceeded_quadrant_limits(self, row_dir, col_dir, s_row, s_col, energy):
-        """BEGIN 3500 - 3870"""
+    def exceeded_quadrant_limits(self, row_dir:float, col_dir:float, s_row:int, s_col:int, energy:int) -> None:
+        """BEGIN 3500 - 3870
+        row_dir: movement in the row with each step
+        col_dir: movement in the col with each step
+        s_row: sector row
+        s_col: sector col
+        energy: number of steps to move"""
         X = 8 * self.enterprise_quad_row + s_row + energy * row_dir
         Y = 8 * self.enterprise_quad_column + s_col + energy * col_dir
-        self.enterprise_quad_row = X // 8
-        self.enterprise_quad_column = Y // 8
+        self.enterprise_quad_row = int(X / 8)
+        self.enterprise_quad_column = int(Y / 8)
         self.enterprise_sect_row = int(X - self.enterprise_quad_row * 8)
         self.enterprise_sect_column = int(Y -self.enterprise_quad_column * 8)
 
@@ -1209,22 +1229,24 @@ class Game:
 
         # 4850
 
-        # X1 = row_dir
         # row_dir = self.course[int(course)][1] + (self.course[int(course) + 1][1] - self.course[int(course)][1]) * (course - int(course))
-        # Y1 = col_dir
         # col_dir = self.course[int(course)][2] + (self.course[int(course) + 1][2] - self.course[int(course)][2]) * (course - int(course))
+        # X1 = row_dir
+        # Y1 = col_dir
         row_dir, col_dir = self.delta_coordinates(course)
+
         self.energy -= 2
         self.photon_torpedos -= 1
+
         s_row = self.enterprise_sect_row
         s_col = self.enterprise_sect_column
 
         print("TORPEDO TRACK:")
         while True:
-            s_row += row_dir                # X
-            s_col += col_dir                # Y
-            tor_row = int(s_row + .5)       # X3
-            tor_col = int(s_col + .5)       # Y3
+            s_row += row_dir                # X: real float extrapolation of row coordinate
+            s_col += col_dir                # Y: real float extrapolation of col coordinate
+            tor_row = int(s_row + .5)       # X3: int row coordinate to print
+            tor_col = int(s_col + .5)       # Y3: int col coordinate to print
 
             # Out of quadrant: Torpedo missed...
             if not (1 <= tor_row <= 8 and 1 <= tor_col <= 8):
@@ -1477,36 +1499,233 @@ class Game:
 
     def com_d_d_calculator(self):
         """BASIC 8150 - 8480"""
-        print("DIRECTION/DISTANCE CALCULATOR - *** NOT YET COMPLETELY IMPLEMENTED ***")
         print("DIRECTION/DISTANCE CALCULATOR:")
         print(f"YOU ARE AT QUADRANT {self.enterprise_quad_row}, {self.enterprise_quad_column} SECTOR {self.enterprise_sect_row}, {self.enterprise_sect_column}")
         print("PLEASE ENTER")
-        coord_ok, from_x = self.ask_coordinate("  INITIAL COORDINATE (X) ")
-        if not coord_ok:
-            return
-        coord_ok, from_y = self.ask_coordinate("  INITIAL COORDINATE (Y) ")
-        if not coord_ok:
-            return
-        coord_ok, to_x = self.ask_coordinate("  FINAL COORDINATE (X) ")
-        if not coord_ok:
-            return
-        coord_ok, to_y = self.ask_coordinate("  FINAL COORDINATE (Y) ")
+
+        # C1: from_row, A: from_col
+        coord_ok, from_row, from_col = self.ask_coordinates("  INITIAL COORDINATES (X,Y) ")
         if not coord_ok:
             return
 
+        # W1: to_row, X: to_col
+        coord_ok, to_row, to_col = self.ask_coordinates("  FINAL COORDINATES (X,Y) ")
+        if not coord_ok:
+            return
 
-    def ask_coordinate(self, msg):
-        coord = input(msg)
+        delta_row, delta_col = self.calculate_deltas(from_row, from_col, to_row, to_col)
+        direction = self.coord_direction(delta_row, delta_col)
+        distance = self.coord_distance(delta_row, delta_col)
+
+        print(f"DIRECTION = {direction:.2f}")
+        print(f"DISTANCE = {distance:.1f}")
+
+
+    def debug_dd(self):
+        from_row = 4
+        from_col = 4
+        n = 0
+        # for to_row, to_col in [(4,6),(2,6),(2,4),(2,2),(4,2),(6,2),(6,4),(6,6)]:
+        # for to_row, to_col in [(4,6),(2,6),(2,4),(2,2),(4,4),(6,2),(6,4),(6,6)]:
+        # for to_row, to_col in [(4,6),(2,6),(2,4),(2,2),(2,2),(6,2),(6,4),(6,6)]:
+        for to_row, to_col in [(4,6),(2,6),(2,4),(2,2),(4,2),(6,2),(6,4),(6,6)]:
+            n += 1
+            print(f'\t////////{n}//////// Starting...')
+            delta_row, delta_col = self.calculate_deltas(from_row, from_col, to_row, to_col)
+            # direction = self.coord_direction(delta_row, delta_col)
+            # direction = self.direction_two(delta_row, delta_col)
+            direction = self.direction_two(delta_row, delta_col)
+            print(f'\t////////{n}//////// {from_row=},{from_col=} : {to_row=},{to_col=} : {delta_row=},{delta_col=} : ***{direction=:.2f}***')
+
+            if False and self.debug_view:
+                print(f'\t>>>>> coord_dir: ({delta_row=},{delta_col=})')
+                if delta_row != 0:
+                    print(f'\t>>row != 0 >> coord_dir: {(abs(delta_col) / abs(delta_row))=}')
+                    print(f'\t>>row != 0 >> coord_dir: {(((abs(delta_row) - abs(delta_col)) + abs(delta_row)) / abs(delta_row))=}')
+                if delta_col != 0:
+                    print(f'\t>>col != 0 >> coord_dir: {(abs(delta_row) / abs(delta_col))=}')
+                    print(f'\t>>col != 0 >> coord_dir: {(((abs(delta_col) - abs(delta_row)) + abs(delta_col)) / abs(delta_col))=}')
+
+
+    def direction_two(self, delta_row, delta_col):
+        direction = 0.0
+        if delta_row == 0 and delta_col == 0:
+            # No movement!
+            return direction
+
+        if delta_row == 0:
+            # print(f'{delta_row=} .. {delta_col=}')
+            # Either 1 or 5...
+            direction = 5
+            if delta_col > 0:
+                direction = 1
+            return direction
+
+        if delta_col == 0:
+            # Either 3 or 7...
+            direction = 3
+            if delta_row > 0:
+                direction = 7
+            return direction
+
+        if delta_row > 0 and delta_col > 0:
+            # 7 < direction < 9
+            if delta_row == delta_col:
+                direction = 8
+            elif delta_row < delta_col:
+                # 8 < dir < 9
+                direction = 9 - delta_row / delta_col
+            else:
+                # 7 < direction < 8
+                direction = 7 + delta_col / delta_row
+            return direction
+
+        if delta_row < 0 and delta_col < 0:
+            # 3 < direction < 5
+            if abs(delta_row) == abs(delta_col):
+                direction = 4
+            elif abs(delta_row) < abs(delta_col):
+                # 5 < dir < 4
+                direction = 5 - abs(delta_row) / abs(delta_col)
+            else:
+                # 3 < direction < 4
+                direction = 3 + abs(delta_col) / abs(delta_row)
+            return direction
+
+        if delta_row > 0 and delta_col < 0:
+            # 5 < direction < 7
+            if abs(delta_row) == abs(delta_col):
+                direction = 6
+            elif abs(delta_row) < abs(delta_col):
+                # 5 < dir < 6
+                direction = 5 + abs(delta_row) / abs(delta_col)
+            else:
+                # 6 < direction < 7
+                direction = 7 - abs(delta_col) / abs(delta_row)
+            return direction
+
+        if delta_row < 0 and delta_col > 0:
+            # 1 < direction < 3
+            if abs(delta_row) == abs(delta_col):
+                direction = 2
+            elif abs(delta_row) < abs(delta_col):
+                # 1 < dir < 2
+                direction = 1 + abs(delta_row) / abs(delta_col)
+            else:
+                # 2 < direction < 3
+                direction = 3 - abs(delta_col) / abs(delta_row)
+            return direction
+
+
+
+
+    def calculate_deltas(self, from_row:int, from_col:int, to_row:int, to_col:int) -> tuple[int, int]:
+        """BASIC 8220
+        delta_col calculation is reversed than expected! but good for results
+        Remember the game show galaxy in terms of row, col, so it is (Y,X) coordinates
+        RETURN: delta_row, delta_col"""
+        delta_row = to_row - from_row
+        delta_col = to_col - from_col
+
+        if False and self.debug_view:
+            print(f'\t>>>>> calculate_deltas: {from_row=} {from_col=} : {to_row=} {to_col=} : {delta_row=} {delta_col=}')
+
+        return delta_row, delta_col
+
+
+    def coord_direction(self, delta_row:float, delta_col:float) -> float:
+        """BASIC 8220, 8120, 8290"""
+
+        if delta_col < 0:
+            if delta_row > 0:
+                course = 3
+                if abs(delta_row >= abs(delta_col)):
+                    direction = course + (abs(delta_col) / abs(delta_row))
+                else:
+                    direction = course + (((abs(delta_col) - abs(delta_row)) + abs(delta_col)) / abs(delta_col))
+            elif delta_col != 0:
+                course = 5
+                if abs(delta_row) <= abs(delta_col):
+                    direction = course + (abs(delta_row) / abs(delta_col))
+                else:
+                    direction = course + (((abs(delta_row) - abs(delta_col)) + abs(delta_row)) / abs(delta_row))
+            else:
+                course = 7
+                if abs(delta_row >= abs(delta_col)):
+                    direction = course + (abs(delta_col) / abs(delta_row))
+                else:
+                    direction = course + (((abs(delta_col) - abs(delta_row)) + abs(delta_col)) / abs(delta_col))
+        elif delta_row < 0:
+            course = 7
+            if abs(delta_row >= abs(delta_col)):
+                direction = course + (abs(delta_col) / abs(delta_row))
+            else:
+                direction = course + (((abs(delta_col) - abs(delta_row)) + abs(delta_col)) / abs(delta_col))
+        elif delta_col > 0:
+            course = 1
+            if abs(delta_row) <= abs(delta_col):
+                direction = course + (abs(delta_row) / abs(delta_col))
+            else:
+                direction = course + (((abs(delta_row) - abs(delta_col)) + abs(delta_row)) / abs(delta_row))
+        elif delta_row == 0:
+            course = 5
+            if abs(delta_row) <= abs(delta_col):
+                direction = course + (abs(delta_row) / abs(delta_col))
+            else:
+                direction = course + (((abs(delta_row) - abs(delta_col)) + abs(delta_row)) / abs(delta_row))
+        else:
+            course = 1
+            if abs(delta_row) <= abs(delta_col):
+                direction = course + (abs(delta_row) / abs(delta_col))
+            else:
+                direction = course + (((abs(delta_row) - abs(delta_col)) + abs(delta_row)) / abs(delta_row))
+
+        if False and self.debug_view:
+            print(f'\t>>>>> coord_direction: {course=}: {delta_row=} {delta_col=} : {direction=}')
+
+        return direction
+
+
+    def coord_distance(self, delta_row:float, delta_col:float) -> float:
+        """BASIC 8460
+        Calculate distance using delta_row and delta_col
+        RETUN: distance"""
+
+        if self.debug_view:
+            print(f'\t>>>>> coord_distance: {(delta_row ** 2 + delta_col ** 2) ** .5}')
+        return (delta_row ** 2 + delta_col ** 2) ** .5
+
+
+    def ask_coordinates(self, msg:str) -> tuple[bool, float, float]:
+        """Ask for coordinates row, col using msg.
+
+        RETURN: valid, row, col"""
+        user_input = input(msg)
+        valid = False
+        error_msg = "*** BAD COORDINATES ***"
         try:
-            from_x = int(from_x)
-        except:
-            print("*** BAD COORDINATE ***")
-            return False, coord
-        if not (1 <= from_x <= 8):
-            print("*** BAD COORDINATE ***")
-            return False, coord
-        return True, coord
+            parts = [item.strip() for item in user_input.split(',')]
 
+            if len(parts) != 2:
+                return valid, user_input, user_input
+
+            row = float(parts[0])
+            col = float(parts[1])
+            
+        except:
+            print(error_msg)
+            return valid, 0, 0
+
+        if not (1 <= row <= 9):
+            print(error_msg)
+            return valid, 0, 0
+
+        if not (1 <= col <= 9):
+            print(error_msg)
+            return valid, 0, 0
+
+        valid = True
+        return valid, row, col
 
 
     def com_galaxy_region_map(self):
