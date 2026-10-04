@@ -6,8 +6,9 @@ Ported from the BBC BASIC listing (May 1978 / Nov 2023 port).
 import random
 import math
 
-def basic_range(start, end):
-    """BASIC FOR I = start TO end, inclusive."""
+def basic_range(start:int, end:int)->range:
+    """BASIC FOR I = start TO end, inclusive.
+    RETURN: range object"""
     return range(start, end + 1)
 
 
@@ -135,26 +136,28 @@ class Game:
             print()
 
 
-    def distance_to_klingon(self, i):
+    def distance_to_klingon(self, i:int)->float:
         """BASIC 470 (FND)
         Distance from Klingon i to Enterprise.
 
         BASIC: DEFFND(D) = SQR((K(I,1)-S1)^2 + (K(I,2)-S2)^2)
         Note: BASIC used a global I; we pass it explicitly — a deliberate fix.
+        RETURN: Euclidean distance to Klingon "i"
         """
         return math.sqrt((self.K[i][1] - self.enterprise_sect_row) ** 2 +
                          (self.K[i][2] - self.enterprise_sect_column) ** 2)
 
 
-    def fnr(self, _=1):
+    def fnr(self, _=1)->int:
         """BASIC 475
         Random integer 1..8. BASIC: FNR(R) = INT(RND(R)*7.98 + 1.01).
         The BASIC argument is essentially ignored; we keep the param for fidelity.
+        RETURN: random integer1..8 inclusive
         """
         return random.randint(1, 8)
 
 
-    def setup_galaxy(self):
+    def setup_galaxy(self)->None:
         """BASIC 810 - 1040
         Populate G (Galaxy) and Z (Known Galaxy) with Klingons, Bases, Stars.
         """
@@ -181,7 +184,7 @@ class Game:
                 self.G[i][j] = self.local_klingons * 100 + self.local_bases * 10 + self.fnr(1)
 
 
-    def fix_up_galaxy(self):
+    def fix_up_galaxy(self)->None:
         """BASIC 1100-1160
         Ensure at least one starbase and enough time.
         """
@@ -218,7 +221,7 @@ class Game:
             self.total_avail_time = self.klingons + 1
 
 
-    def print_orders(self):
+    def print_orders(self)->None:
         """Show mission briefing. BASIC 1201, 1230-1280."""
         if self.bases != 1:
             self.X_str = "S"
@@ -232,7 +235,7 @@ class Game:
         print()
 
 
-    def enter_quadrant(self):
+    def enter_quadrant(self)->None:
         """
         BASIC 1300 - 1600
         Now entering X Quadrant...
@@ -263,11 +266,12 @@ class Game:
         self.setup_quadrant()
         
 
-    def update_known_galaxy(self):
+    def update_known_galaxy(self)->None:
+        """Update known galaxy info with recently entered Quadrant info"""
         self.known_galaxy[self.enterprise_quad_row][self.enterprise_quad_column] = self.G[self.enterprise_quad_row][self.enterprise_quad_column]
 
 
-    def print_quadrant_entry(self):
+    def print_quadrant_entry(self)->None:
         """
         BASIC 1430 - 
         Printing Info regarding the just entered Quadrant
@@ -303,7 +307,7 @@ class Game:
         self.Q_str = [[self.EMPTY_SPACE] * 9 for _ in range(9)]
 
 
-    def setup_quadrant(self):
+    def setup_quadrant(self)->None:
         """"BASIC 1660 - 1980
         Place objects: self.local_klingons, self.local_bases, self.local_stars,
         in sector grid
@@ -368,7 +372,7 @@ class Game:
             pass
 
 
-    def insert_in_quadrant(self, space_object, row, column):
+    def insert_in_quadrant(self, space_object, row, column)->None:
         """
         BASIC: 8670
         INSERT IN STRING ARRAY FOR QUADRANT
@@ -379,7 +383,7 @@ class Game:
         self.Q_str[row][column] = space_object
 
 
-    def find_empty_place_in_quadrant(self):
+    def find_empty_place_in_quadrant(self)->tuple[int, int]:
         """8590
         FIND EMPTY PLACE IN QUADRANT (FOR THINGS)
         RETURN tuple(r1, r2) = sector's empty space coordinates
@@ -409,16 +413,16 @@ class Game:
                 if found:
                     break
             else:
-                print('ERROR: No empty space in Quadrant.')
+                print('***ERROR: No empty space in Quadrant.')
                 quit()
         return (r1, r2)
 
 
-    def is_object_in_coordinates(self, looking_for, row, column):
+    def is_object_in_coordinates(self, looking_for:str, row:int, column:int)->bool:
         """
         BASIC 8830
         looking_for: space objects: <*>, >!<, +K+, " * ", "   "
-        RETURN True if z1, z2 coordinates content is the same as looking_for
+        RETURN True if row, col coordinates content is the same as looking_for
         else return False
         """
         
@@ -429,7 +433,7 @@ class Game:
         return self.Q_str[row][column] == looking_for
 
 
-    def srs_scan_and_startup(self):
+    def srs_scan_and_startup(self)->None:
         """
         BASIC 6430 - 7260
         SHORT RANGE SENSOR SCAN & STARTUP SUBROUTINE
@@ -438,9 +442,9 @@ class Game:
         self.srs_display()
 
 
-    def docked_check(self):
+    def docked_check(self)->None:
         """6430 - 6660
-        Docking check"""
+        Set the condition of the Quadrant: DOCKED, GREEN, YELLOW, *RED*"""
         docked = False
         for i in basic_range(self.enterprise_sect_row - 1, self.enterprise_sect_row + 1):
             for j in basic_range(self.enterprise_sect_column - 1, self.enterprise_sect_column + 1):
@@ -471,10 +475,10 @@ class Game:
                     self.condition = "YELLOW"
 
 
-    def srs_display(self):
+    def srs_display(self)->None:
         """
         BASIC 6720 - 7260
-        Short Range Sensor Scan - Draw Sector + status panel
+        Show Short Range Sensor Scan - Draw Sector + status panel
         """
         # 6720 - Check if SRS is Damaged
         if self.damage_on[2] < 0:
@@ -521,7 +525,7 @@ class Game:
         return
 
 
-    def region_name(self, z4, z5, region_only=False):
+    def region_name(self, z4:int, z5:int, region_only:bool=False)->str:
         """Return the region name for quadrant (z4, z5)
         BASIC: 9010 - 9300
         z4: Q1
@@ -554,14 +558,14 @@ class Game:
         return name
 
 
-    def __repr__(self):
+    def __repr__(self)->str:
         return f'Game:\n\
 \tToday: {self.today} - Start Date: {self.start_date} - Total Avail. Time: {self.total_avail_time}\n\
 \tQuadrant: [{self.enterprise_quad_row}, {self.enterprise_quad_column}], Sector: [{self.enterprise_sect_row}, {self.enterprise_sect_column}]\n\
 \tKlingons: {self.klingons} - Bases: {self.bases}'
 
 
-    def debug_print_galaxy(self):
+    def debug_print_galaxy(self)->None:
         """Quick print of the Klingons-Bases-Stars distribution"""
         print('\n>> DEBUG PRINT OF THE GALAXY <<\n')
         for i in basic_range(1, 8):
@@ -570,7 +574,7 @@ class Game:
             print()
 
 
-    def debug_print_quadrant(self):
+    def debug_print_quadrant(self)->None:
         """Quick print of actual quadrant to check"""
         for i in basic_range(1, 8):
             for j in basic_range(1, 8):
@@ -578,7 +582,7 @@ class Game:
             print()
 
 
-    def command_loop(self):
+    def command_loop(self)->None:
         """
         BASIC 1990 - 2060
         """
@@ -617,9 +621,10 @@ class Game:
                 self.print_commands()
 
 
-    def print_fatal_error(self):
+    def print_fatal_error(self)->None:
         """
         BASIC 2020 - 2050
+        Print message about stranded Enterprise...
         """
         self.game_over = True
         print()
@@ -632,9 +637,10 @@ class Game:
         self.end_of_game()
 
 
-    def end_of_game(self):
+    def end_of_game(self)->None:
         """
         BASIC 6220 - 6280
+        Print date and klingons left
         """
         print(f'IT IS STARDATE {self.today:.1f}')
         print(f'THERE WERE {self.klingons} KLINGON BATTLE CRUISERS LEFT AT')
@@ -644,9 +650,10 @@ class Game:
         self.any_bases_left()
 
 
-    def any_bases_left(self):
+    def any_bases_left(self)->None:
         """
         BASIC 6290 - 6360
+        If any bases  left, check if you want to play another
         """
         if self.bases <= 0:
             self.play_another = False
@@ -655,9 +662,11 @@ class Game:
         self.want_to_play_another()
 
 
-    def want_to_play_another(self):
+    def want_to_play_another(self)->None:
         """
         BASIC 6310 - 6360
+        Ask if you want to play another game with 
+        the same space objects as left in this game.
         """
         print("THE FEDERATION IS IN NEED OF A NEW STARSHIP COMMANDER")
         print("FOR A SIMILAR MISSION -- IF THERE IS A VOLUNTEER,")
@@ -671,9 +680,11 @@ class Game:
         # quit()
 
 
-    def enterprise_destroyed(self):
+    def enterprise_destroyed(self)->None:
         """
         BASIC 6240 - 6250
+        Set game_over, Enterprise destroyed, GAME-OVER
+        (If you want to play again, it will be a new game)
         """
         self.game_over = True
         print()
@@ -681,9 +692,10 @@ class Game:
         self.end_of_game()
 
 
-    def mission_accomplished(self):
+    def mission_accomplished(self)->None:
         """
         BASIC 6370 - 6400
+        Print message about successfully ending your mission
         """
         self.game_over = True
         print("CONGRULATION, CAPTAIN! THEN LAST KLINGON BATTLE CRUISER")
@@ -693,9 +705,10 @@ class Game:
         self.any_bases_left()
 
 
-    def print_commands(self):
+    def print_commands(self)->None:
         """
         BASIC 2060
+        Print available commands
         """
         print("ENTER ONE OF THE FOLLOWING:")
         print("  NAV  (TO SET COURSE)")
@@ -710,9 +723,11 @@ class Game:
         print()
 
 
-    def cmd_nav(self):
+    def cmd_nav(self)->None:
         """
         BASIC 2300 - 3480
+        Move through the Quadrant/Galaxy; 
+        If there are Klingons, they can move & attack
         """
 
         # 2300
@@ -789,8 +804,9 @@ class Game:
         self.begin_moving_starship(course, warp, energy)
 
 
-    def begin_moving_starship(self, course, warp, energy):
-        """BASIC 3070 - 3450"""
+    def begin_moving_starship(self, course:float, warp:float, energy:int)->None:
+        """BASIC 3070 - 3450
+        Move the Enterprise"""
         # Leaving this sector...
         self.insert_in_quadrant(self.EMPTY_SPACE, int(self.enterprise_sect_row), int(self.enterprise_sect_column))
 
@@ -864,19 +880,23 @@ class Game:
             return
 
 
-    def no_time_left(self):
+    def no_time_left(self)->bool:
+        """RETURN whether We have already reached the target date or not"""
         if self.today > self.start_date + self.total_avail_time:
             self.game_over = True
             return True
         return False
 
 
-    def time_left(self):
+    def time_left(self)->float:
+        """Return the number of stardates available to end the mission"""
         return self.total_avail_time - ( self.today - self.start_date)
     
 
     def exceeded_quadrant_limits(self, row_dir:float, col_dir:float, s_row:int, s_col:int, energy:int) -> None:
         """BEGIN 3500 - 3870
+        Check if actual Quadrant limits have been exeeded
+        and update position accordingly.
         row_dir: movement in the row with each step
         col_dir: movement in the col with each step
         s_row: sector row
@@ -930,8 +950,9 @@ class Game:
                 return
 
 
-    def klingons_move(self):
-        """Basic 2590 - """
+    def klingons_move(self)->None:
+        """Basic 2590 - 
+        Move the up-to-3 Klingons in this Quadrant"""
         for i in basic_range(1, self.local_klingons):
             if self.K[i][3] == 0:
                 continue
@@ -943,8 +964,10 @@ class Game:
             self.insert_in_quadrant(self.KLINGON, row, column)
 
 
-    def klingons_fire(self):
-        """Basic 6000 - 6200"""
+    def klingons_fire(self)->None:
+        """Basic 6000 - 6200
+        If not DOCKED, the Klingons in this Quadrant open fire, 
+        might affect shields and some device"""
         if not self.local_klingons:
             return
 
@@ -980,15 +1003,16 @@ class Game:
             self.device_affected(hit_power)
 
 
-    def device_affected(self, hit_power):
-        """BASIC 6140 - 6170"""
+    def device_affected(self, hit_power:float)->None:
+        """BASIC 6140 - 6170
+        Update the status of the affected device relative to hit power, shields & luck!"""
         device = self.fnr(1)
         self.damage_on[device] = self.damage_on[device] - hit_power / self.shields - .5 * random.random()
         device_name = self.device_name(device)
         print(f"DAMAGE CONTROL REPORTS {device_name} DAMAGED BY THE HIT'")
 
 
-    def device_name(self, device_number):
+    def device_name(self, device_number:int)->str:
         """BASIC 8790
         device_number: The device index to search
         RETURN a device name"""
@@ -1005,8 +1029,10 @@ class Game:
         return DEVICES.get(device_number, "")
 
 
-    def select_course(self):
-        """BASIC 2300 - 2330"""
+    def select_course(self)->tuple[bool, float]:
+        """BASIC 2300 - 2330
+        Ask for a course
+        RETURN a vaidity check and the actual course"""
         course_ok = False
         try:
             # I will use courses as int; if using float, indexes are wrong, also 
@@ -1030,8 +1056,10 @@ class Game:
         return course_ok, course
 
 
-    def select_warp(self):
-        """BASIC 2350 - 2470"""
+    def select_warp(self)->tuple[bool, float]:
+        """BASIC 2350 - 2470
+        Ask for a warp factor
+        RETURN a validity check and the actual warp factor"""
         warp_ok = False
         max_warp = 8 if self.damage_on[1] >= 0 else 0.2
         if self.damage_on[1] < 0:
@@ -1063,8 +1091,11 @@ class Game:
         return warp_ok, 0
 
 
-    def energy_needed(self, warp):
-        """Basic 2490 - 2570"""
+    def energy_needed(self, warp)->tuple[bool, float]:
+        """Basic 2490 - 2570
+        Checks whether We have enough energy to perform 
+        the warp-factor mone
+        RETURN wether we have the energy, and the amount of it"""
         enough_energy = False
         # One warp gives you energy to move 8 sectors, so, to the next quadrant, same sector.
         needed = int(warp * 8 + .5)
@@ -1085,12 +1116,15 @@ class Game:
         return enough_energy, needed
  
 
-    def incorrect_nav_course(self):
+    def incorrect_nav_course(self)->None:
+        """Print Incorrect NAV course message"""
         print("   LT. SULU REPORTS, 'INCORRECT COURSE DATA, SIR!'")
 
 
-    def maneuver_energy(self, energy):
-        """BASIC 3910 - 3980"""
+    def maneuver_energy(self, energy:float)->None:
+        """BASIC 3910 - 3980
+        Check if there is enough energy to use, 
+        If not, take the remaining need from shields"""
         self.energy -= (energy + 10)
         if self.energy >= 0:
             return
@@ -1103,8 +1137,10 @@ class Game:
         return
 
 
-    def cmd_lrs(self):
-        """BASIC 4000 - 4230"""
+    def cmd_lrs(self)->None:
+        """BASIC 4000 - 4230
+        Long Range Scanner: Shows what's on adjacent quadrants &
+        update known Galaxy"""
         # Is LRS damaged?
         if self.damage_on[3] < 0:
             print("LONG RANGE SENSORS ARE INOPERABLE")
@@ -1131,8 +1167,10 @@ class Game:
             print(separator)
 
 
-    def cmd_pha(self):
-        """BASIC 4260 - 4670"""
+    def cmd_pha(self)->None:
+        """BASIC 4260 - 4670
+        Phasers: Asks how hard to attack Klingons in this Quadrant and do it!
+        If Klingons still alive, they couter-attack!"""
         # Are Phasers damaged?
         if self.damage_on[4] < 0:
             print('PHASERS INOPERATIVE')
@@ -1195,8 +1233,10 @@ class Game:
         self.klingons_fire()
 
 
-    def cmd_tor(self):
-        """BASIC 4700 - 5490"""
+    def cmd_tor(self)->None:
+        """BASIC 4700 - 5490
+        Send Torpedo in a specific course.
+        Beware: Torpedos are letal, either for Klingons or StarBases"""
         if self.photon_torpedos <= 0:
             print("ALL PHOTON TORPEDOS EXPENDED")
             return
@@ -1274,7 +1314,7 @@ class Game:
                 return
 
 
-    def delta_coordinates(self, course):
+    def delta_coordinates(self, course)->tuple[float, float]:
         """ Calculate the delta move (delta_row, delta_col) for float courses 
         RETURN: delta_row, delta_col"""
         delta_row = self.course[int(course)][1] + (self.course[int(course) + 1][1] - self.course[int(course)][1]) * (course - int(course))
@@ -1282,8 +1322,9 @@ class Game:
         return delta_row, delta_col
 
 
-    def base_destroyed(self, row, col):
-        """BASIC 5330 - """
+    def base_destroyed(self, row, col)->None:
+        """BASIC 5330 - 
+        Oh my...!, You destroyed a Starbase, Shame on you..."""
         print("*** STARBASE DESTROYED ***")
         self.local_bases -= 1
         self.bases -= 1
@@ -1311,8 +1352,10 @@ class Game:
         self.known_galaxy[self.enterprise_quad_row][self.enterprise_quad_column] = self.G[self.enterprise_quad_row][self.enterprise_quad_column]
 
 
-    def klingon_destroyed(self, row, col):
-        """BASIC 5110 - 5470"""
+    def klingon_destroyed(self, row, col)->None:
+        """BASIC 5110 - 5470
+        Klingon destroyed, update local and global count of Klingons 
+        & check for mission acomplished"""
         print("*** KLINGON DESTROYED ***")
         self.local_klingons-= 1
         self.klingons -= 1
@@ -1328,12 +1371,14 @@ class Game:
                 self.known_galaxy[self.enterprise_quad_row][self.enterprise_quad_column] = self.G[self.enterprise_quad_row][self.enterprise_quad_column]
 
 
-    def incorrect_tor_course(self):
+    def incorrect_tor_course(self)->None:
+        """Prints message"""
         print("ENSIGN CHEKOV REPORTS, 'INCORRECT COURSE DATA, SIR!'")
 
 
-    def cmd_she(self):
-        """BASIC 5530 - 5660"""
+    def cmd_she(self)->None:
+        """BASIC 5530 - 5660
+        Set Shields' energy"""
         # Are shields damaged?
         if self.damage_on[7] < 0:
             print('SHIELDS INOPERABLE')
@@ -1359,11 +1404,12 @@ class Game:
         self.shields = units
         print('DEFLECTOR CONTROL ROOM REPORT:')
         print(f" 'SHIELDS NOW AT {int(self.shields)} UNITS PER YOUR COMMAND.'")
-        return
 
 
-    def cmd_dam(self):
-        """BASIC 5690 - 5980"""
+    def cmd_dam(self)->None:
+        """BASIC 5690 - 5980
+        Damaged Devices: Check & Shows damaged devices and ask for permission to repair, 
+        if granted, repair them within the calculated time and show end devices status"""
         if self.damage_on[6] >= 0:
             # Damage control works: show status
             self.show_damage_status()
@@ -1408,8 +1454,9 @@ class Game:
         self.show_damage_status()
 
 
-    def show_damage_status(self):
-        """BASIC 5910 - """
+    def show_damage_status(self)->None:
+        """BASIC 5910 - 
+        Show the device & damaged status list"""
         print()
         print("DEVICE             STATE OF REPAIR")
         for device in basic_range(1, 8):
@@ -1418,8 +1465,10 @@ class Game:
         print()
 
 
-    def cmd_com(self):
-        """BASIC 7290 -"""
+    def cmd_com(self)->None:
+        """BASIC 7290 -
+        Computer: Loop asking for next computer command.
+        If wrong command, print options"""
         if self.damage_on[8] < 0:
             print("COMPUTER DISABLED")
             return
@@ -1456,8 +1505,9 @@ class Game:
             self.print_computer_options()
 
 
-    def print_computer_options(self):
-        """BASIC 7350"""
+    def print_computer_options(self)->None:
+        """BASIC 7350
+        Print Computer Command Options"""
 
         print("FUNCTIONS AVAILABLE FROM LIBRARY-COMPUTER:")
         print("   0 = CUMULATIVE GALACTIC RECORD")
@@ -1469,8 +1519,9 @@ class Game:
         print()
 
 
-    def com_status_report(self):
-        """BASIC 7890 - 8020"""
+    def com_status_report(self)->None:
+        """BASIC 7890 - 8020
+        Status Report: Print actual mission status."""
         print("   STATUS REPORT")
         self.X_str = "" if self.klingons == 1 else "S"
         print(f"KLINGON{self.X_str} LEFT: {self.klingons}")
@@ -1484,8 +1535,9 @@ class Game:
         self.cmd_dam()
 
 
-    def com_tor_data(self):
-        """BASIC 8070 - """
+    def com_tor_data(self)->None:
+        """BASIC 8070 - 
+        Photon Torpedos Data: Shows direction, distance to actual klingons in Quadrant"""
 
         if self.local_klingons <= 0:
             print("SCIENCE OFFICER SPOCK REPORTS 'SENSORS SHOW NO ENEMY SHIPS")
@@ -1514,7 +1566,7 @@ class Game:
 
 
     def dir_dist_calc(self, from_row:int, from_col:int, to_row:int, to_col:int) -> tuple[float, float]:
-        """Given from and to coordinates
+        """Direction & Distance Calculator: Given from and to coordinates
         RETURN: direction, distance"""
         delta_row, delta_col = self.calculate_deltas(from_row, from_col, to_row, to_col)
         direction = self.my_coord_direction(delta_row, delta_col)
@@ -1522,8 +1574,9 @@ class Game:
         return direction, distance
 
 
-    def com_starbase_nav_data(self):
-        """BASIC 8500 - """
+    def com_starbase_nav_data(self)->None:
+        """BASIC 8500 - 
+        Starbase Nav Data: Show direction, distance to Starbase"""
         if self.local_bases == 0:
             print("MR. SPOCK REPORTS, 'SENSORS SHOW NO STARBASES IN THIS QUADRANT.")
             return
@@ -1543,8 +1596,10 @@ class Game:
         print(f"DISTANCE = {distance:.1f}")
 
 
-    def com_d_d_calculator(self):
-        """BASIC 8150 - 8480"""
+    def com_d_d_calculator(self)->None:
+        """BASIC 8150 - 8480
+        Direction-Distance Calculator: Asks for initial and final coordinates and
+        calculate and shows direction, distance"""
         print("DIRECTION/DISTANCE CALCULATOR:")
         print(f"YOU ARE AT QUADRANT {self.enterprise_quad_row}, {self.enterprise_quad_column} SECTOR {self.enterprise_sect_row}, {self.enterprise_sect_column}")
         print("PLEASE ENTER")
@@ -1568,7 +1623,8 @@ class Game:
         print(f"DISTANCE = {distance:.1f}")
 
 
-    def debug_dd(self):
+    def debug_dd(self)->None:
+        """Helper to check dd calc is working Ok"""
         from_row = 4
         from_col = 4
         n = 0
@@ -1585,7 +1641,7 @@ class Game:
 
 
     def my_coord_direction(self, delta_row:float, delta_col:float) -> float:
-        """Calculate direction for delta_row, delta_col
+        """My Version of Course calculator: Calculate direction for delta_row, delta_col
         RETURN: direction"""
         direction = 0.0
         if delta_row == 0 and delta_col == 0:
@@ -1656,9 +1712,10 @@ class Game:
             return direction
 
 
-    def calculate_deltas(self, from_row:int, from_col:int, to_row:int, to_col:int) -> tuple[int, int]:
+    def calculate_deltas(self, from_row:int, from_col:int, to_row:int, to_col:int) -> tuple[float, float]:
         """BASIC 8220
-        delta_col calculation is reversed than expected! but good for results
+        In BASIC delta_col calculation is reversed than expected!
+        As I am using my own version of coord_direction, I use the usual version of deltas.
         Remember the game show galaxy in terms of row, col, so it is (Y,X) coordinates
         RETURN: delta_row, delta_col"""
         delta_row = to_row - from_row
@@ -1669,7 +1726,7 @@ class Game:
 
     def coord_distance(self, delta_row:float, delta_col:float) -> float:
         """BASIC 8460
-        Calculate distance using delta_row and delta_col
+        Calculate Euclidean distance using delta_row and delta_col
         RETUN: distance"""
         return (delta_row ** 2 + delta_col ** 2) ** .5
 
@@ -1706,8 +1763,9 @@ class Game:
         return valid, row, col
 
 
-    def com_galaxy_region_map(self):
-        """BASIC 7400"""
+    def com_galaxy_region_map(self)->None:
+        """BASIC 7400
+        Print the Galaxy's region names over the Quadrants"""
         print("                        THE GALAXY")
         self.print_galaxy_headers()
         self.print_galaxy_sep()
@@ -1715,27 +1773,31 @@ class Game:
         # self.print_galaxy_sep()
 
 
-    def print_galaxy_headers(self):
-        """BASIC 7550 - 7570"""
+    def print_galaxy_headers(self)->None:
+        """BASIC 7550 - 7570"
+        Print header with Galaxy's Quadrant column numbers"""
         print("       1     2     3     4     5     6     7     8")
 
 
-    def print_galaxy_sep(self):
-        """BASIC 7560"""
+    def print_galaxy_sep(self)->None:
+        """BASIC 7560
+        Print Sector rows separator"""
         galaxy_sep = "     ----- ----- ----- ----- ----- ----- ----- -----"
         print(galaxy_sep)
 
 
-    def com_cumulative_gal_record(self):
-        """BASIC 7530 -"""
+    def com_cumulative_gal_record(self)->None:
+        """BASIC 7530 -
+        Print known Info about galaxy"""
         self.print_cumulative_headers()
         self.print_galaxy_headers()
         self.print_galaxy_sep()
         self.print_known_galaxy()
 
 
-    def print_known_galaxy(self):
-        """BASIC 7570 - 7850"""
+    def print_known_galaxy(self)->None:
+        """BASIC 7570 - 7850
+        Print info about known Galaxy's Quadrants: KBS = KlingonsBasesStars per Quadrant"""
         for i in basic_range(1, 8):
             print(f"{i}   ", end="")
             for j in basic_range(1, 8):
@@ -1746,15 +1808,17 @@ class Game:
         print()
 
 
-    def print_cumulative_headers(self):
-        """BASIC 7543 - 7546"""
+    def print_cumulative_headers(self)->None:
+        """BASIC 7543 - 7546
+        Print cumulative header"""
         print()
         print(f"        COMPUTER RECORD OF GALAXY FOR QUADRANT {self.enterprise_quad_row}, {self.enterprise_quad_column}")
         print()
 
 
-    def print_galaxy_region_names(self):
-        """BASIC """
+    def print_galaxy_region_names(self)->None:
+        """BASIC 
+        Print Galaxy's region names, no number"""
         for i in basic_range(1, 8):
             print(f"{i}   ", end="")
             north_region = self.region_name(i, 1, region_only=True)
@@ -1763,8 +1827,12 @@ class Game:
             self.print_galaxy_sep()
 
 
-    def play(self):
-        """Play the game"""
+    def play(self)->None:
+        """Play the game
+        If play_another, continue with the loop.
+        If game_over, reset the Galaxy to a new one to start again, 
+        otherwise continue using the last game remaining config 
+        to start a new one"""
         while self.play_another:
             if self.game_over:
                 self.reset()
