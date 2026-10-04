@@ -5,6 +5,7 @@ Ported from the BBC BASIC listing (May 1978 / Nov 2023 port).
 
 import random
 import math
+import text_color
 
 def basic_range(start:int, end:int)->range:
     """BASIC FOR I = start TO end, inclusive.
@@ -32,10 +33,10 @@ class Game:
         self.show_uss_enterprise()
 
         # Space objects...
-        self.ENTERPRISE = "<*>"
-        self.KLINGON = "+K+"
-        self.BASE = ">!<"
-        self.STAR = " * "
+        self.ENTERPRISE = text_color.color_message("<*>", "CYAN")
+        self.KLINGON = text_color.color_message("+K+", "RED")
+        self.BASE = text_color.color_message(">!<", "MAGENTA")
+        self.STAR = text_color.color_message(" * ", "YELLOW")
         self.EMPTY_SPACE = "..." if self.debug_view else "   "
 
         # --- Strings (BASIC variables ending in $) ---
@@ -111,7 +112,11 @@ class Game:
         self.local_klingons = 0
         self.local_bases = 0
         self.local_stars = 0
-        self.D3                 # Cumulative delays in Damage control
+        self.D3 = 0                 # Cumulative delays in Damage control
+        self.t_green = text_color.color_message("GREEN", "GREEN")
+        self.t_yellow = text_color.color_message("YELLOW", "YELLOW")
+        self.t_red = text_color.color_message("*RED*", "RED")
+        self.t_docked = text_color.color_message("DOCKED", "MAGENTA")
 
         # New vars to control game ending or repeating
         # game_over is to signal the end of this game, no more cmd_loop
@@ -461,7 +466,7 @@ class Game:
         if docked:
             # 6580 Docked to Base
             self.docked = 1
-            self.condition = "DOCKED"
+            self.condition = self.t_docked
             self.energy = self.full_energy
             self.photon_torpedoes = self.full_photon_torpedoes
             print('SHIELDS DROPPED FOR DOCKING PURPOSES')
@@ -469,11 +474,11 @@ class Game:
         else:
             self.docked = 0
             if self.local_klingons:
-                self.condition = "*RED*"
+                self.condition = self.t_red
             else:
-                self.condition = "GREEN"
+                self.condition = self.t_green
                 if self.energy < self.full_energy * .1:
-                    self.condition = "YELLOW"
+                    self.condition = self.t_yellow
 
 
     def srs_display(self)->None:
@@ -851,7 +856,7 @@ class Game:
                     crossed = True
                     self.today += 1
                     self.enter_quadrant()
-                if self.no_time_left():
+                if self.check_timeout():
                     return
 
                 break
