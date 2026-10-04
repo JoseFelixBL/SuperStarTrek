@@ -60,8 +60,8 @@ class Game:
         # E: energy,            E0: full_energy
         self.energy = self.full_energy = 3000
 
-        # P: photon_torpedos,   P0: full_photon_torpedos
-        self.photon_torpedos = self.full_photon_torpedos = 10
+        # P: photon_torpedoes,   P0: full_photon_torpedoes
+        self.photon_torpedoes = self.full_photon_torpedoes = 10
         self.S9 = 200
         self.shields = 0        # S: shields
 
@@ -111,6 +111,7 @@ class Game:
         self.local_klingons = 0
         self.local_bases = 0
         self.local_stars = 0
+        self.D3                 # Cumulative delays in Damage control
 
         # New vars to control game ending or repeating
         # game_over is to signal the end of this game, no more cmd_loop
@@ -462,7 +463,7 @@ class Game:
             self.docked = 1
             self.condition = "DOCKED"
             self.energy = self.full_energy
-            self.photon_torpedos = self.full_photon_torpedos
+            self.photon_torpedoes = self.full_photon_torpedoes
             print('SHIELDS DROPPED FOR DOCKING PURPOSES')
             self.shields = 0
         else:
@@ -508,7 +509,7 @@ class Game:
             2: f'{self.condition}',
             3: f'{self.enterprise_quad_row}, {self.enterprise_quad_column}',
             4: f'{self.enterprise_sect_row}, {self.enterprise_sect_column}',
-            5: f'{int(self.photon_torpedos)}',
+            5: f'{int(self.photon_torpedoes)}',
             6: f'{int(self.energy + self.shields)}',
             7: f'{int(self.shields)}',
             8: f'{int(self.klingons)}',
@@ -688,7 +689,8 @@ class Game:
         """
         self.game_over = True
         print()
-        print('THE ENTERPRISE HAS BEEN DESTROYED. THEN FEDERATION WILL BE CONQUERED')
+        # Fixed Typo: from "THEN FEDERATION..." to "THE FEDERATION...""
+        print('THE ENTERPRISE HAS BEEN DESTROYED. THE FEDERATION WILL BE CONQUERED')
         self.end_of_game()
 
 
@@ -698,8 +700,11 @@ class Game:
         Print message about successfully ending your mission
         """
         self.game_over = True
-        print("CONGRULATION, CAPTAIN! THEN LAST KLINGON BATTLE CRUISER")
-        print("MENACING THE FDERATION HAS BEEN DESTROYED.")
+        # Fixed Typo: from "THEN LAST KLINGON..." to "THE LAST KLINGON..."
+        # Typo: from "CONGRULATION" to "CONGRATULATION"
+        # Typo: from "FDERATION" to "FEDERATION"
+        print("CONGRATULATION, CAPTAIN! THE LAST KLINGON BATTLE CRUISER")
+        print("MENACING THE FEDERATION HAS BEEN DESTROYED.")
         print()
         print(f"YOUR EFFICIENCY RATING IS {1000 * (self.K7 / (self.today - self.start_date)) ** 2}")
         self.any_bases_left()
@@ -830,7 +835,7 @@ class Game:
 
             # self.enterprise_sect_row += row_dir
             # self.enterprise_sect_column += col_dir
-            # int(s_row + .5) is adjusting for float type navigation, as in torpedos' nav.
+            # int(s_row + .5) is adjusting for float type navigation, as in torpedoes' nav.
             self.enterprise_sect_row = int(s_row + .5)
             self.enterprise_sect_column = int(s_col + .5)
 
@@ -875,15 +880,14 @@ class Game:
                 T8 = .1 * int(10 * warp)
             self.today += T8
 
-        if self.no_time_left():
-            self.end_of_game()
-            return
+        if self.check_timeout(): return
 
 
-    def no_time_left(self)->bool:
+    def check_timeout(self)->bool:
         """RETURN whether We have already reached the target date or not"""
         if self.today > self.start_date + self.total_avail_time:
             self.game_over = True
+            self.end_of_game()
             return True
         return False
 
@@ -946,8 +950,7 @@ class Game:
             print("CHIEF ENGINEER SCOTT REPORTS 'WARP ENGINES SHUT DOWN")
             print(f"AT SECTOR {self.enterprise_sect_row}, {self.enterprise_sect_column} OF QUADRANT {self.enterprise_quad_row}, {self.enterprise_quad_column}.'")
 
-            if self.no_time_left():
-                return
+            if self.check_timeout(): return
 
 
     def klingons_move(self)->None:
@@ -1237,7 +1240,7 @@ class Game:
         """BASIC 4700 - 5490
         Send Torpedo in a specific course.
         Beware: Torpedos are letal, either for Klingons or StarBases"""
-        if self.photon_torpedos <= 0:
+        if self.photon_torpedoes <= 0:
             print("ALL PHOTON TORPEDOS EXPENDED")
             return
 
@@ -1271,7 +1274,7 @@ class Game:
         row_dir, col_dir = self.delta_coordinates(course)
 
         self.energy -= 2
-        self.photon_torpedos -= 1
+        self.photon_torpedoes -= 1
 
         s_row = self.enterprise_sect_row
         s_col = self.enterprise_sect_column
@@ -1475,12 +1478,15 @@ class Game:
 
         while True:
             command = input("COMPUTER ACTIVE AND AWAITING COMMAND: ")
-            print()
             try:
                 command = int(command)
             except:
                 self.print_computer_options()
                 continue
+
+            if command < 0:
+                return
+            print()
 
             if command == 0:
                 self.com_cumulative_gal_record()
@@ -1499,8 +1505,6 @@ class Game:
                 return
             if command == 5:
                 self.com_galaxy_region_map()
-                return
-            if command < 0:
                 return
             self.print_computer_options()
 
@@ -1561,8 +1565,11 @@ class Game:
             # direction = self.my_coord_direction(delta_row, delta_col)
             # distance = self.coord_distance(delta_row, delta_col)
 
-            print(f"DIRECTION = {direction:.2f}")
-            print(f"DISTANCE = {distance:.1f}") 
+            # Added 'Klingon at sector...' and the '\t' in DIRECTIO and DISTANCE 
+            # to make unambiguous the info if various Klingons in sector.
+            print(f'{self.KLINGON} at sector {to_row}, {to_col}:')
+            print(f"\tDIRECTION = {direction:.2f}")
+            print(f"\tDISTANCE = {distance:.1f}") 
 
 
     def dir_dist_calc(self, from_row:int, from_col:int, to_row:int, to_col:int) -> tuple[float, float]:
@@ -1578,7 +1585,7 @@ class Game:
         """BASIC 8500 - 
         Starbase Nav Data: Show direction, distance to Starbase"""
         if self.local_bases == 0:
-            print("MR. SPOCK REPORTS, 'SENSORS SHOW NO STARBASES IN THIS QUADRANT.")
+            print("MR. SPOCK REPORTS, 'SENSORS SHOW NO STARBASES IN THIS QUADRANT.'")
             return
 
         print("FROM ENTERPRISE TO STARBASE:")
