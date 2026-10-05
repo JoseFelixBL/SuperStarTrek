@@ -5,7 +5,7 @@ Ported from the BBC BASIC listing (May 1978 / Nov 2023 port).
 
 import random
 import math
-import text_color
+import ansi_text_color
 
 def basic_range(start:int, end:int)->range:
     """BASIC FOR I = start TO end, inclusive.
@@ -33,10 +33,10 @@ class Game:
         self.show_uss_enterprise()
 
         # Space objects...
-        self.ENTERPRISE = text_color.color_message("<*>", "CYAN")
-        self.KLINGON = text_color.color_message("+K+", "RED")
-        self.BASE = text_color.color_message(">!<", "MAGENTA")
-        self.STAR = text_color.color_message(" * ", "YELLOW")
+        self.ENTERPRISE = ansi_text_color.text_color("<*>", "CYAN")
+        self.KLINGON = ansi_text_color.text_color("+K+", "RED")
+        self.BASE = ansi_text_color.text_color(">!<", "MAGENTA")
+        self.STAR = ansi_text_color.text_color(" * ", "YELLOW", mode="BLINKING")
         self.EMPTY_SPACE = "..." if self.debug_view else "   "
 
         # --- Strings (BASIC variables ending in $) ---
@@ -113,10 +113,10 @@ class Game:
         self.local_bases = 0
         self.local_stars = 0
         self.D3 = 0                 # Cumulative delays in Damage control
-        self.t_green = text_color.color_message("GREEN", "GREEN")
-        self.t_yellow = text_color.color_message("YELLOW", "YELLOW")
-        self.t_red = text_color.color_message("*RED*", "RED")
-        self.t_docked = text_color.color_message("DOCKED", "MAGENTA")
+        self.t_green = ansi_text_color.text_color("GREEN", "GREEN")
+        self.t_yellow = ansi_text_color.text_color("YELLOW", "YELLOW")
+        self.t_red = ansi_text_color.text_color("*RED*", "RED")
+        self.t_docked = ansi_text_color.text_color("DOCKED", "MAGENTA")
 
         # New vars to control game ending or repeating
         # game_over is to signal the end of this game, no more cmd_loop
@@ -296,7 +296,8 @@ class Game:
         print()
 
         if self.local_klingons:
-            print(f'COMBAT AREA      CONDITION RED')
+            # print(f'COMBAT AREA      CONDITION RED')
+            print(f'COMBAT AREA      CONDITION {ansi_text_color.text_color("RED", "RED")}')
             if self.shields <= 200:
                 print('   SHIELDS DANGEROUSLY LOW')
         for i in basic_range(1,3):
