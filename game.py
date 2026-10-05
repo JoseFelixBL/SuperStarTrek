@@ -36,7 +36,7 @@ class Game:
         self.ENTERPRISE = ansi_text_color.text_color("<*>", "CYAN")
         self.KLINGON = ansi_text_color.text_color("+K+", "RED")
         self.BASE = ansi_text_color.text_color(">!<", "MAGENTA")
-        self.STAR = ansi_text_color.text_color(" * ", "YELLOW", mode="BLINKING")
+        self.STAR = ansi_text_color.text_color(" * ", "YELLOW", modes="BLINKING")
         self.EMPTY_SPACE = "..." if self.debug_view else "   "
 
         # --- Strings (BASIC variables ending in $) ---
@@ -117,6 +117,8 @@ class Game:
         self.t_yellow = ansi_text_color.text_color("YELLOW", "YELLOW")
         self.t_red = ansi_text_color.text_color("*RED*", "RED")
         self.t_docked = ansi_text_color.text_color("DOCKED", "MAGENTA")
+        self.K_destroyed = ansi_text_color.text_color("*** KLINGON DESTROYED ***", "GREEN")
+        self.B_destroyed = ansi_text_color.text_color("*** STARBASE DESTROYED ***", "RED")
 
         # New vars to control game ending or repeating
         # game_over is to signal the end of this game, no more cmd_loop
@@ -707,9 +709,9 @@ class Game:
         """
         self.game_over = True
         # Fixed Typo: from "THEN LAST KLINGON..." to "THE LAST KLINGON..."
-        # Typo: from "CONGRULATION" to "CONGRATULATION"
+        # Typo: from "CONGRULATION" to "CONGRATULATIONS"
         # Typo: from "FDERATION" to "FEDERATION"
-        print("CONGRATULATION, CAPTAIN! THE LAST KLINGON BATTLE CRUISER")
+        print("CONGRATULATIONS, CAPTAIN! THE LAST KLINGON BATTLE CRUISER")
         print("MENACING THE FEDERATION HAS BEEN DESTROYED.")
         print()
         print(f"YOUR EFFICIENCY RATING IS {1000 * (self.K7 / (self.today - self.start_date)) ** 2}")
@@ -1334,7 +1336,8 @@ class Game:
     def base_destroyed(self, row, col)->None:
         """BASIC 5330 - 
         Oh my...!, You destroyed a Starbase, Shame on you..."""
-        print("*** STARBASE DESTROYED ***")
+        # print("*** STARBASE DESTROYED ***")
+        print(f'{self.B_destroyed}')
         self.local_bases -= 1
         self.bases -= 1
         # Checking for the possible end of the game, I think there is an error:
@@ -1365,7 +1368,8 @@ class Game:
         """BASIC 5110 - 5470
         Klingon destroyed, update local and global count of Klingons 
         & check for mission acomplished"""
-        print("*** KLINGON DESTROYED ***")
+        # print("*** KLINGON DESTROYED ***")
+        print(f'{self.K_destroyed}')
         self.local_klingons-= 1
         self.klingons -= 1
         if self.klingons <= 0:

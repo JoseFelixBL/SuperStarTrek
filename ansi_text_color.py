@@ -43,23 +43,41 @@ class AnsiColor:
     SEP = ";"
     TEXT_FORMAT = "m"
 
-def make_color_code(fg_color, bg_color="", mode=""):
-    return f'{AnsiColor.ESC}{AnsiColor.CSI}{AnsiColor.FG_COLOR.get(fg_color, 39)}\
-{"" if bg_color == "" else AnsiColor.SEP + str(AnsiColor.BG_COLOR.get(bg_color, 49))}\
-{"" if mode == "" else AnsiColor.SEP + str(AnsiColor.GRAPHIC_MODE.get(mode, 1))}\
-{AnsiColor.TEXT_FORMAT}'
+def make_color_code(fg_color, bg_color="", modes=None):
+    """Return an ANSI SGR code for fg/bg/modes. Empty bg/modes are omitted.
+    modes can be a space-separated list of modes"""
+
+    parts = [str(AnsiColor.FG_COLOR.get(fg_color, AnsiColor.FG_COLOR["DEFAULT"]))]
+    if bg_color:
+        parts.append(str(AnsiColor.BG_COLOR.get(bg_color, AnsiColor.BG_COLOR["DEFAULT"])))
+
+    if modes:
+        if isinstance(modes, str):
+            modes = modes.upper().split()
+
+        for m in modes:
+            parts.append(str(AnsiColor.GRAPHIC_MODE.get(m, AnsiColor.GRAPHIC_MODE["RESET"])))
+
+    # if mode:
+        # parts.append(str(AnsiColor.GRAPHIC_MODE.get(mode, AnsiColor.GRAPHIC_MODE["RESET"])))
+
+    return f'{AnsiColor.ESC}{AnsiColor.CSI}{AnsiColor.SEP.join(parts)}{AnsiColor.TEXT_FORMAT}'
 
 
 def reset_color_code():
+    """Return the ANSI reset color code, to be appended after each color so latter text will not be affected."""
     return f'{AnsiColor.ESC}{AnsiColor.CSI}{AnsiColor.GRAPHIC_MODE.get("RESET", 0)}{AnsiColor.TEXT_FORMAT}'
 
 
-def text_color(msg, fg_color, bg_color="", mode=""):
-    return make_color_code(fg_color=fg_color, bg_color=bg_color, mode=mode) + msg + reset_color_code()
+def text_color(msg, fg_color, bg_color="", modes=None):
+    """Helper function to use make_color_code and reset_color_code to have the complete sequence.
+    Returns the complete string to print or use in a f-string."""
+    return make_color_code(fg_color=fg_color, bg_color=bg_color, modes=modes) + msg + reset_color_code()
 
 
 # Examples:
 # print(f'{make_color_code(fg_color="CYAN")}Hola Mundo{reset_color_code()}')
 # print(f'{make_color_code(fg_color="YELLOW", bg_color="RED", mode="BLINKING")}Esto blinkea!!!{reset_color_code()}')
 # 
-# print(f'{text_color("Hola estrella", "GREEN", mode="BLINKING")}')
+# print(f'{text_color("Hola estrella", "GREEN", modes="BLINKING underline Italic")}')
+# print(f'{text_color("Caracola", "GREEN", modes="Italic")}')
