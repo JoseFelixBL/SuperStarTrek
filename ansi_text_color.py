@@ -43,13 +43,14 @@ class AnsiColor:
     SEP = ";"
     TEXT_FORMAT = "m"
 
-def make_color_code(fg_color, bg_color="", modes=None):
+def make_color_code(fg_color:str, bg_color:str="", modes:str=None)->str:
     """Return an ANSI SGR code for fg/bg/modes. Empty bg/modes are omitted.
-    modes can be a space-separated list of modes"""
+    modes can be a space-separated list of modes
+    Example: make_color_code("GREEN", modes="BLINKING underline Italic")"""
 
-    parts = [str(AnsiColor.FG_COLOR.get(fg_color, AnsiColor.FG_COLOR["DEFAULT"]))]
+    parts = [str(AnsiColor.FG_COLOR.get(fg_color.upper(), AnsiColor.FG_COLOR["DEFAULT"]))]
     if bg_color:
-        parts.append(str(AnsiColor.BG_COLOR.get(bg_color, AnsiColor.BG_COLOR["DEFAULT"])))
+        parts.append(str(AnsiColor.BG_COLOR.get(bg_color.upper(), AnsiColor.BG_COLOR["DEFAULT"])))
 
     if modes:
         if isinstance(modes, str):
@@ -64,12 +65,13 @@ def make_color_code(fg_color, bg_color="", modes=None):
     return f'{AnsiColor.ESC}{AnsiColor.CSI}{AnsiColor.SEP.join(parts)}{AnsiColor.TEXT_FORMAT}'
 
 
-def reset_color_code():
-    """Return the ANSI reset color code, to be appended after each color so latter text will not be affected."""
+def reset_color_code()->str:
+    """Return the ANSI reset color code, to be appended after each color 
+    so latter text will not be affected."""
     return f'{AnsiColor.ESC}{AnsiColor.CSI}{AnsiColor.GRAPHIC_MODE.get("RESET", 0)}{AnsiColor.TEXT_FORMAT}'
 
 
-def text_color(msg, fg_color, bg_color="", modes=None):
+def text_color(msg:str, fg_color:str, bg_color:str="", modes:str=None)->str:
     """Helper function to use make_color_code and reset_color_code to have the complete sequence.
     Returns the complete string to print or use in a f-string."""
     return make_color_code(fg_color=fg_color, bg_color=bg_color, modes=modes) + msg + reset_color_code()
