@@ -49,7 +49,7 @@ class Game:
         self.known_galaxy = [[0]*9 for _ in range(9)]   # Z[][]: self.know_galaxy : Explored/Known galaxy
         self.course = [[0]*3 for _ in range(10)]        # C[][]: Course vectors
         self.K = [[0]*4 for _ in range(4)]              # Klingons in quadrant
-        self.N = [0]*4
+        # self.N = [0]*4                                  # N: Helper for LRS
         self.damage_on = [0]*9                          # D[]: self.damage_on[device_number]
 
         # --- Scalars (BASIC lines 370-470) ---
@@ -63,8 +63,8 @@ class Game:
 
         # P: photon_torpedoes,   P0: full_photon_torpedoes
         self.photon_torpedoes = self.full_photon_torpedoes = 10
-        self.S9 = 200
-        self.shields = 0        # S: shields
+        self.initial_klingon_shields = 200           # S9: Klingon Shields - on Quadrant setup, multiplied by a random number.
+        self.shields = 0                             # S: shields
 
         # NOTE: The original BASIC sets Bases = 2 initially, which seems to be a
         # leftover from an older version of the game. The galaxy always starts
@@ -104,15 +104,15 @@ class Game:
             self.damage_on[i] = 0                   # D[]: self.damage_on[device_number]
 
         # --- Other Object state variables, and initializations
-        self.K7 = 0
+        self.total_klingons = 0             # K7: Holds the starting number of Klingons to use in the Mission Accomplished Rating message.
         self.Q_str = [[self.EMPTY_SPACE] * 9 for _ in range(9)]    # Start with all space empty
         self.random_delay = 0.0               # D4: Random delay
-        self.G5 = 0
+        # self.G5 = 0                   # G5: in BASIC Used to flag the need of Quadrant numbers - Not needed!
         self.condition = "UNKNOWN"
         self.local_klingons = 0
         self.local_bases = 0
         self.local_stars = 0
-        self.D3 = 0                 # Cumulative delays in Damage control
+        # self.D3 = 0                 # D3: Cumulative delays in Damage control - Not needed - only used in DAMage control
         self.t_green = ansi_text_color.text_color("GREEN", "GREEN")
         self.t_yellow = ansi_text_color.text_color("YELLOW", "YELLOW")
         self.t_red = ansi_text_color.text_color("*RED*", "RED")
@@ -172,7 +172,7 @@ class Game:
         # SETUP WHAT EXISTS IN GALAXY…
         for i in basic_range(1, 8):
             for j in basic_range(1, 8):
-                self.known_galaxy[i][j] = 0             # Not Known quadrant
+                self.known_galaxy[i][j] = 0             # == 0: Not Known quadrant
                 ods = random.random()
                 self.local_klingons = 0
                 if ods > .98:
@@ -216,7 +216,7 @@ class Game:
             self.enterprise_quad_row = self.fnr(1)
             self.enterprise_quad_column = self.fnr(1)
 
-        self.K7 = self.klingons
+        self.total_klingons = self.klingons
 
         # Is there enough time?
         # NOTE: I have moved the `enough time` after Bases checking
@@ -256,8 +256,8 @@ class Game:
         self.local_klingons = 0
         self.local_bases = 0
         self.local_stars = 0
-        self.G5 = 0
-        self.random_delay = .5 * random.random()          # Random delay recalculated on quadrant entry
+        # self.G5 = 0
+        self.random_delay = .5 * random.random()          # Random delay setup recalculated on quadrant entry
         self.update_known_galaxy()
 
         # 1390
@@ -344,7 +344,7 @@ class Game:
 
                 self.K[i][1] = R1
                 self.K[i][2] = R2
-                self.K[i][3] = self.S9 * (0.5 + random.random())
+                self.K[i][3] = self.initial_klingon_shields * (0.5 + random.random())
 
         # Bases:
         if self.local_bases:
@@ -498,7 +498,7 @@ class Game:
             return
 
         # 6770 - Print SRS info
-        O1_str = '-' * 33
+        quadrant_delimiter = '-' * 33
 
         # enterprise_headers & enterprise_info for easier printing in TTY
         enterprise_headers = {
@@ -525,12 +525,12 @@ class Game:
 
         # DEBUG ONLY - put a `|` to "see" the space.
         sector_sep = '|' if self.debug_view else ' '
-        print(O1_str)
+        print(quadrant_delimiter)
         for row in basic_range(1, 8):
             for column in basic_range(1, 8):
                 print(f'{sector_sep}{self.Q_str[row][column]}', end="")
             print(f'{sector_sep}{enterprise_headers[row]}{enterprise_info[row]}')
-        print(O1_str)
+        print(quadrant_delimiter)
         return
 
 
@@ -714,7 +714,7 @@ class Game:
         print("CONGRATULATIONS, CAPTAIN! THE LAST KLINGON BATTLE CRUISER")
         print("MENACING THE FEDERATION HAS BEEN DESTROYED.")
         print()
-        print(f"YOUR EFFICIENCY RATING IS {1000 * (self.K7 / (self.today - self.start_date)) ** 2}")
+        print(f"YOUR EFFICIENCY RATING IS {1000 * (self.total_klingons / (self.today - self.start_date)) ** 2}")
         self.any_bases_left()
 
 
@@ -1160,20 +1160,22 @@ class Game:
         print(f'LONG RANGE SCAN FOR QUADRANT {self.enterprise_quad_row}, {self.enterprise_quad_column}')
         separator = f'{"-" * 19}'
         print(separator)
+        quadrant_info = [0] * 4
         for i in basic_range(self.enterprise_quad_row - 1, self.enterprise_quad_row + 1):
-            self.N[1] = -1
-            self.N[2] = -2
-            self.N[3] = -3
+            quadrant_info[1] = -1
+            quadrant_info[2] = -2
+            quadrant_info[3] = -3
             for j in basic_range(self.enterprise_quad_column - 1, self.enterprise_quad_column + 1):
+                # is quadrant[i][j] in galaxy?
                 if 0 < i < 9 and 0 < j < 9:
-                    self.N[j - self.enterprise_quad_column + 2] = self.G[i][j]
+                    quadrant_info[j - self.enterprise_quad_column + 2] = self.G[i][j]
                     self.known_galaxy[i][j] = self.G[i][j]
             for l in basic_range(1, 3):
                 print(': ', end='')
-                if self.N[l] < 0:
+                if quadrant_info[l] < 0:
                     print("*** ", end='')
                 else:
-                    print(f'{self.N[l]:03} ', end='')
+                    print(f'{quadrant_info[l]:03} ', end='')
             print(":")
             print(separator)
 
@@ -1423,35 +1425,35 @@ class Game:
         """BASIC 5690 - 5980
         Damaged Devices: Check & Shows damaged devices and ask for permission to repair, 
         if granted, repair them within the calculated time and show end devices status"""
-        if self.damage_on[6] >= 0:
-            # Damage control works: show status
-            self.show_damage_status()
-        else:
+        if self.damage_on[6] < 0:
             # Damage control "damaged", cannot check...
             print("DAMAGE CONTROL REPORT NOT AVAILABLE")
 
             if not self.docked:
                 return
 
+        # Damage control works: show status
+        self.show_damage_status()
+
         # Compute the cumulative delays: D3
-        self.D3 = 0
+        total_delay = 0
         for i in basic_range(1, 8):
             if self.damage_on[i] < 0:
-                self.D3 += .1
+                total_delay += .1
 
         # Nothing to repair
-        if self.D3 == 0:
+        if total_delay == 0:
             return
 
         print()
         # Add random delay (D4) that chages on every quadrant entry
-        self.D3 += self.random_delay
+        total_delay += self.random_delay
         
         # Delay is less than one day
-        self.D3 = .9 if self.D3 >= 1 else self.D3
+        total_delay = .9 if total_delay >= 1 else total_delay
 
         print('TECHNICIANS STANDING BY TO EFFECT REPAIRS TO YOUR SHIP')
-        print(f'ESTIMATED TIME TO REPAIR: {.01 * int(100 * self.D3)} STARDATES')
+        print(f'ESTIMATED TIME TO REPAIR: {.01 * int(100 * total_delay)} STARDATES')
         y_n = input('WILL YOU AUTHORIZE THE REPAIR ORDER (Y/N) ').strip().upper()
         if y_n != "Y":
             return
@@ -1462,7 +1464,7 @@ class Game:
                 self.damage_on[i] = 0
 
         # Update Today's date with delays
-        self.today += self.D3 + .1
+        self.today += total_delay + .1
 
         self.show_damage_status()
 
