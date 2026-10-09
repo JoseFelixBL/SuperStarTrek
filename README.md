@@ -107,16 +107,12 @@ Klingons outnumber the remaining days.
 
 ## Deliberate behaviour changes
 
-### Integer courses
+### Integer courses - fixed: Now float courses allowed!
 
 The original allows fractional courses (e.g. `1.5`) which move the
-ship partway between two adjacent directions. This port restricts
-courses to integers. Rationale: the fractional-course support in the
-original relies on float truncation in array indexing, and its
-semantics for edge cases (e.g. what sector a fractional coordinate
-snaps to) are not well-defined. Restricting to integers keeps the
-movement logic simple and predictable. Directions reported by the
-computer are still rounded to two decimal places.
+ship partway between two adjacent directions.  
+
+Movement (NAV) courses as well as Torpedoes' can be float, in Enterprise movements the only adjustment is that the final location of it is in integer digits (row, col).  
 
 ### Course and distance format
 
@@ -175,7 +171,6 @@ A `debug_view` flag (default off) enables:
   - `DBG` command for direction/distance testing.
   - Empty sectors shown as `...` instead of `   `.
   - `|` separators between sector cells.
-  - Per-step movement trace during `NAV`.
 
 Not used in normal play.
 
@@ -194,8 +189,7 @@ list indexing.
 The original's direction routine (`8220-8460`) is written as a
 tangle of `GOTO`s with reversed coordinate deltas. The port uses a
 clean, documented `my_coord_direction` function that produces the
-same results. The original routine is retained in comments for
-reference.
+same results. The original routine is not retained.  
 
 ### Single-step routines split
 
