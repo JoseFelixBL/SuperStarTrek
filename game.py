@@ -6,6 +6,8 @@ Ported from the BBC BASIC listing (May 1978 / Nov 2023 port).
 import random
 import math
 import ansi_text_color
+import json
+from pathlib import Path
 
 def basic_range(start:int, end:int)->range:
     """BASIC FOR I = start TO end, inclusive.
@@ -30,7 +32,7 @@ class Game:
         """BASIC 330 - 710
         Reset all state to start a new game.
         """
-        self.show_uss_enterprise()
+        # self.show_uss_enterprise()
 
         # Space objects...
         self.ENTERPRISE = ansi_text_color.text_color("<*>", "CYAN")
@@ -231,6 +233,8 @@ class Game:
 
     def print_orders(self)->None:
         """Show mission briefing. BASIC 1201, 1230-1280."""
+        self.show_uss_enterprise()
+
         if self.bases != 1:
             self.X_str = "S"
             self.X0_str = " ARE "
@@ -622,6 +626,8 @@ class Game:
             elif a_str == "COM":
                 self.cmd_com()
             elif a_str == "XXX":
+                if self.save_restore_game():
+                    continue
                 self.play_another = False
                 return
             elif self.debug_view and a_str == "DBG":
@@ -1859,4 +1865,159 @@ class Game:
             self.fix_up_galaxy()
             self.print_orders()
             self.enter_quadrant()
+
             self.command_loop()
+
+
+    def save_restore_game(self)->bool:
+        continue_playing = True
+        resp = input("Do you want to SAVE (S) or RESTORE (R) the game? if not, Exit (X) the game: (S/R/X) ").upper()
+        if resp == "X":
+            continue_playing = False
+            return continue_playing
+
+        if resp not in ["S", "R"]:
+            # Just going back to the game
+            return continue_playing
+
+        if resp == "S":
+            self.select_file(to_save=True)
+            return continue_playing
+
+        self.select_file(to_save=False)
+        return continue_playing
+
+
+    def select_file(self, to_save:bool=True):
+        invalid_msg = "Invalid choice."
+        action = "Save" if to_save else "Restore"
+        number = input(f'Select file number to {action} [1, 2, 3]')
+        try:
+            number = int(number)
+        except:
+            print(invalid_msg)
+            return
+
+        if not (1 <= number <= 3):
+            print(invalid_msg)
+
+        file = Path(f"SST_saved_{number}.json")
+
+        if to_save:
+            self.save_game(file)
+            return
+
+        if not file.exists():
+            print(f'File not found. {invalid_msg}')
+            return
+        self.restore_game(file)
+        return
+
+
+    def restore_game(self, file:Path)->None:
+        """Restore the game state"""
+        with open(file, mode="r", encoding="utf-8") as read_file:
+            game_data = json.load(read_file)
+
+        # Clean everything
+        self.reset()
+
+        # dates
+        self.today = game_data["dates"]["today"]
+        self.start_date = game_data["dates"]["start_date"]
+        self.total_avail_time = game_data["dates"]["total_avail_time"]
+
+        # enterprise
+        self.enterprise_quad_row = game_data["enterprise"]["coord"]["enterprise_quad_row"]
+        self.enterprise_quad_column = game_data["enterprise"]["coord"]["enterprise_quad_column"]
+        self.enterprise_sect_row = game_data["enterprise"]["coord"]["enterprise_sect_row"]
+        self.enterprise_sect_column = game_data["enterprise"]["coord"]["enterprise_sect_column"]
+        self.insert_in_quadrant(self.ENTERPRISE, self.enterprise_sect_row, self.enterprise_sect_column)
+
+        self.docked = game_data["enterprise"]["docked"]
+        self.energy = game_data["enterprise"]["energy"]
+        self.photon_torpedoes = game_data["enterprise"]["photon_torpedoes"]
+        self.shields = game_data["enterprise"]["shields"]
+
+        self.known_galaxy = game_data["enterprise"]["known_galaxy"]
+        self.damage_on = game_data["enterprise"]["damage_on"]
+
+        # space
+        self.G = game_data["space"]["galaxy"]
+        self.total_klingons = game_data["space"]["total_klingons"]
+        self.klingons = game_data["space"]["klingons"]
+        self.bases = game_data["space"]["bases"]
+
+        # sector
+        self.random_delay = game_data["sector"]["random_delay"]
+        self.K = game_data["sector"]["K"]
+        for vessel in self.K[1:]:
+            if vessel[3] > 0:
+                self.insert_in_quadrant(self.KLINGON, vessel[1], vessel[2])
+        self.local_klingons = game_data["sector"]["local_klingons"]
+        self.local_bases = game_data["sector"]["local_bases"]
+        self.base_row = game_data["sector"]["base_row"]
+        self.base_col = game_data["sector"]["base_col"]
+        if self.base_row > 0 and self.base_col > 0:
+            self.insert_in_quadrant(self.BASE, self.base_row, self.base_col)
+        self.local_stars = game_data["sector"]["local_stars"]
+        for sector in game_data["sector"]["stars_in_sector"]:
+            self.insert_in_quadrant(self.STAR, sector["i"], sector["j"])
+
+        self.print_orders()
+        self.srs_scan_and_startup()
+
+
+    def save_game(self, file:Path)->None:
+        """Save the game state"""
+        dates = {
+            "today": self.today,
+            "start_date": self.start_date,
+            "total_avail_time": self.total_avail_time
+        }
+        enterprise = {
+            "coord": {
+                "enterprise_quad_row": self.enterprise_quad_row,
+                "enterprise_quad_column": self.enterprise_quad_column,
+                "enterprise_sect_row": self.enterprise_sect_row,
+                "enterprise_sect_column": self.enterprise_sect_column
+            },
+            "docked": self.docked,
+            "energy": self.energy,
+            "photon_torpedoes": self.photon_torpedoes,
+            "shields": self.shields,
+            "known_galaxy": self.known_galaxy,
+            "damage_on": self.damage_on
+        }
+        space = {
+            "galaxy": self.G,
+            "total_klingons": self.total_klingons,
+            "klingons": self.klingons,
+            "bases": self.bases
+        }
+        stars_in_sector = []
+        for i in basic_range(1, 8):
+            for j in basic_range(1, 8):
+                if self.is_object_in_coordinates(self.STAR, i, j):
+                    stars_in_sector.append({"i": i, "j": j})
+        sector = {
+            "random_delay": self.random_delay,
+            "K": self.K,
+            "local_klingons": self.local_klingons,
+            "local_bases": self.local_bases,
+            "base_row": self.base_row,
+            "base_col": self.base_col,
+            "local_stars": self.local_stars,
+            "stars_in_sector": stars_in_sector
+        }
+
+        game_data = {
+           "dates": dates,
+           "enterprise": enterprise,
+           "space": space,
+           "sector": sector
+        }
+
+        # print(json.dumps(game_data, indent=2))
+        with open(file, mode="w", encoding="utf-8") as write_file:
+            json.dump(game_data, write_file)
