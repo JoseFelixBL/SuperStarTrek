@@ -5,35 +5,41 @@ from collections import Counter
 
 from game import Game
 
-def check_T9_range():
-    """Test the T9 range of the game with all the set ups & fixes"""
+def check_total_avail_time_range():
+    """Test the total_avail_time range of the game with all the set ups & fixes"""
     counts = dict()
     for _ in range(10_000):
         game = Game()
         game.setup_galaxy()
         game.fix_up_galaxy()
-        if game.T9 not in counts:
-            counts[game.T9] = 0
-        counts[game.T9] += 1
+        if game.total_avail_time not in counts:
+            counts[game.total_avail_time] = 0
+        counts[game.total_avail_time] += 1
 
-    print(f'T9 Indices: {sorted(counts)}')
+    print(f'total_avail_time Indices: {sorted(counts)}')
     if 35 in counts:
-        print('WARNING: Index 35 appeared in T9.')
+        print('WARNING: Index 35 appeared in total_avail_time.')
     else:
-        print('T9 Indices look Ok.')
+        print('total_avail_time Indices look Ok.')
 
 
-def check_T9_only():
-    """Test random T9 generation to check boundaries"""
+def check_total_avail_time_only():
+    """Test random total_avail_time generation to check boundaries"""
     number_of_days_distribution = Counter(25 + random.randint(0, 9) for _ in range(10_000))
-    print(f'Check T9 only (not the complete game): {number_of_days_distribution}')
+    print(f'Check total_avail_time only (not the complete game): {number_of_days_distribution}')
 
 
 def check_randomness():
     """Test Initial game randomness"""
     for _ in range(3):
         game = Game()
+        game.setup_galaxy()
         print(game)
+        if game.bases == 0:
+            game.fix_up_galaxy()
+            print(f'{" -+- " * 5}Bases Fixed!{" -+- " * 5}')
+            print(game)
+            print(f'{" -+- " * 5}Bases Fixed!{" -+- " * 5}')
 
 
 def check_galaxy_generation():
@@ -49,25 +55,25 @@ def check_galaxy_generation():
 
         # Invariants check:
         klingons_count =  sum([game.G[i][j] // 100 for i in range(1, 9) for j in range(1, 9)] )
-        assert klingons_count == game.Klingons
+        assert klingons_count == game.klingons
 
-        assert game.Bases >= 1
+        assert game.bases >= 1
 
         bases_count = sum([((game.G[i][j] // 10) % 10) for i in range(1, 9) for j in range(1, 9)] )
-        assert bases_count == game.Bases
+        assert bases_count == game.bases
 
         # According to MY current design choice of using `>=` 
         # comparison in fix_up_galaxy
-        assert game.T9 >= (game.Klingons + 1)
+        assert game.total_avail_time >= (game.klingons + 1)
 
         k.append(klingons_count)
         b.append(bases_count)
-        t9.append(game.T9)
+        t9.append(game.total_avail_time)
 
     # Average checks:
     print(f'...Galaxy Averages:   Klingons: {sum(k)/1000:.3f} - Bases: {sum(b)/1000:.3f}')
     print(f'...Quadrant Averages: Klingons: {sum(k)/1000/64:.3f} - Bases: {sum(b)/1000/64:.3f}')
-    print(f'...T9 Average: {sum(t9)/1000:.2f}')
+    print(f'...total_avail_time Average: {sum(t9)/1000:.2f}')
 
 
 def check_region_names():
@@ -82,7 +88,7 @@ def check_region_names():
 if __name__ == "__main__":
     print('Running all test')
     check_randomness()
-    check_T9_range()
-    check_T9_only()
+    check_total_avail_time_range()
+    check_total_avail_time_only()
     check_galaxy_generation()
     print('All tests passed')
