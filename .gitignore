@@ -1,3 +1,11 @@
 __pycache__/
 __pycache__/game.cpython-312.pyc
+*.pyc
+.venv/
+build_env/
+build/
+SST_saved_*.json
 game_run*
+Captura*
+Snapshot*
+*.exe
