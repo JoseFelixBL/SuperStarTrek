@@ -3,6 +3,12 @@
 ### To exit the game while playing
 In the Command menu type `XXX`
 
+### To save or restore while playing
+
+Type `XXX` in the Command menu. You'll be prompted to save (S),
+restore (R), or exit (X). Save files are numbered 1–3 and stored
+as `SST_saved_1.json` etc. in the game's directory.
+
 ## Game commands and behaviour
 You are the Commander of the USS Enterprise and your mission is to kill all Klingons in the Galaxy within a time limit.
 
@@ -42,9 +48,9 @@ You have the following commands:
   - **LRS**: long range sensor scan  
     Show conditions in space for one quadrant on each side  
     of the Enterprise (which is in the middle of the scan)  
-    The scan is coded in the form `###` where the unit digit  
+    The scan is coded in the form `###` where the units digit  
     is the number of stars, the tens digit is the number of  
-    starbases, and the hundred digit is the number of  
+    starbases, and the hundreds digit is the number of  
     Klingons.  
 
   - **PHA**: phaser control  
@@ -61,7 +67,7 @@ You have the following commands:
     of all other Klingons in the quadrant.  
 
     The library-computer (**COM** command) has an option to compute  
-    torpedo trajectory for you (option 2)  
+    torpedo trajectory for you (option 2).  
 
   - **SHE**: shield control  
     Define the number of energy units to be assigned to the  

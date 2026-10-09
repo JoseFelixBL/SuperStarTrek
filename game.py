@@ -1348,6 +1348,8 @@ class Game:
         print(f'{self.B_destroyed}')
         self.local_bases -= 1
         self.bases -= 1
+        self.base_row = 0
+        self.base_col = 0
         # Checking for the possible end of the game, I think there is an error:
         # in BASIC it reads IF Bases > 0 OR Klingons > T... (if there are bases or ther is not enogh time left; how come having bases is a game ending?)
         # Shouldn't it be IF Bases > 0 or Klingons <= T... 
@@ -1871,7 +1873,8 @@ class Game:
 
     def save_restore_game(self)->bool:
         continue_playing = True
-        resp = input("Do you want to SAVE (S) or RESTORE (R) the game? if not, Exit (X) the game: (S/R/X) ").upper()
+        resp = input("Save (S), Restore (R), or eXit (X)? ").strip().upper()
+        # resp = input("Do you want to SAVE (S) or RESTORE (R) the game? if not, Exit (X) the game: (S/R/X) ").upper()
         if resp == "X":
             continue_playing = False
             return continue_playing
@@ -1888,10 +1891,10 @@ class Game:
         return continue_playing
 
 
-    def select_file(self, to_save:bool=True):
+    def select_file(self, to_save:bool=True)->None:
         invalid_msg = "Invalid choice."
         action = "Save" if to_save else "Restore"
-        number = input(f'Select file number to {action} [1, 2, 3]')
+        number = input(f'Select file number to {action} [1, 2, 3]: ')
         try:
             number = int(number)
         except:
@@ -1900,6 +1903,7 @@ class Game:
 
         if not (1 <= number <= 3):
             print(invalid_msg)
+            return
 
         file = Path(f"SST_saved_{number}.json")
 

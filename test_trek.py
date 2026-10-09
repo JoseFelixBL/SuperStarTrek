@@ -34,12 +34,13 @@ def check_randomness():
     for _ in range(3):
         game = Game()
         game.setup_galaxy()
+        game.fix_up_galaxy()
         print(game)
-        if game.bases == 0:
-            game.fix_up_galaxy()
-            print(f'{" -+- " * 5}Bases Fixed!{" -+- " * 5}')
-            print(game)
-            print(f'{" -+- " * 5}Bases Fixed!{" -+- " * 5}')
+        # if game.bases == 0:
+            # game.fix_up_galaxy()
+            # print(f'{" -+- " * 5}Bases Fixed!{" -+- " * 5}')
+            # print(game)
+            # print(f'{" -+- " * 5}Bases Fixed!{" -+- " * 5}')
 
 
 def check_galaxy_generation():

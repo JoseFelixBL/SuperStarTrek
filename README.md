@@ -4,7 +4,7 @@ Port from BBC Basic Super Startrek - November 12, 2023, by Lee Morgan - to Pytho
 
 # Requirements
 
-  - Python 3.12 or newer (uses `match`/`case`).
+  - Python 3.9 or newer.
   - A terminal with ANSI colour support.
 
 # Files
@@ -12,8 +12,9 @@ Port from BBC Basic Super Startrek - November 12, 2023, by Lee Morgan - to Pytho
   - `main.py` — entry point. Creates a `Game` and runs it.
   - `game.py` — the `Game` class: all game state and logic.
   - `ansi_text_color.py` — small helper for ANSI colour codes.
-  - `tests_trek.py` — sanity checks and invariants (run with `python tests_trek.py`).
+  - `trek_test.py` — sanity checks and invariants (run with `python trek_test.py`).
   - `INSTRUCTIONS.md` — player's manual.
+  - `SST_saved_{1,2,3}.json` — save files (created on demand).  
 
 # License  
 
@@ -26,13 +27,16 @@ the same licence — use it, modify it, share it.
 The actual version is meant to be run in a computer with Python 3.12+ :
   - Load all components to a suitable directory
   - In a terminal window, navigate to the installation directory
-  - run `python main.py`
+  - run `python main.py`  
+
+Save files are written to the current directory as `SST_saved_1.json`,  
+`SST_saved_2.json`, or `SST_saved_3.json`.  
 
 # Testing
 
 Run the test suite:
 
-    python tests_trek.py
+    python trek_test.py
 
 The tests verify:
   - Galaxy generation invariants (encoded counts match counters).
@@ -59,7 +63,7 @@ The Starship has 9 commands:
   - **SHE**: shield control to protect from Klingon's attacks.  
   - **DAM**: damage control report, to see what's broken and how long will it take to repair.  
   - **COM**: library-computer, with various options to show.  
-  - **XXX**: to exit the game.
+  - **XXX**: to save, restore or exit the game.
 
 See `INSTRUCTIONS.md` for detaled information.
 
@@ -107,12 +111,13 @@ Klingons outnumber the remaining days.
 
 ## Deliberate behaviour changes
 
-### Integer courses - fixed: Now float courses allowed!
+### Float courses supported
 
 The original allows fractional courses (e.g. `1.5`) which move the
-ship partway between two adjacent directions.  
-
-Movement (NAV) courses as well as Torpedoes' can be float, in Enterprise movements the only adjustment is that the final location of it is in integer digits (row, col).  
+ship partway between two adjacent directions. Both NAV courses and
+torpedo courses accept floats. For Enterprise movement, the final
+sector coordinates are rounded to integers when the ship stops, so
+the ship always ends on a valid sector.  
 
 ### Course and distance format
 
